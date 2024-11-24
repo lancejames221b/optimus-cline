@@ -1,10 +1,15 @@
 // State management
 let currentCost = 0;
 let costLimit = 100;
-let recentCommands = [];
-let activeTasks = new Map();
 let currentProject = null;
-let isGlobalIntegrations = false;
+let customRules = [];
+let defaultRules = [
+    "Don't delete production systems",
+    "Always backup before making changes",
+    "Verify changes in staging first",
+    "Follow security protocols",
+    "Document all changes"
+];
 
 // Theme colors with opacity
 const colors = {
@@ -27,14 +32,203 @@ const animations = {
     fadeOut: [
         { opacity: 1, transform: 'translateY(0)' },
         { opacity: 0, transform: 'translateY(20px)' }
-    ],
-    shake: [
-        { transform: 'translateX(0)' },
-        { transform: 'translateX(-5px)' },
-        { transform: 'translateX(5px)' },
-        { transform: 'translateX(0)' }
     ]
 };
+
+// Task Management
+function showNewTaskDialog() {
+    const dialog = document.getElementById('newTaskDialog');
+    dialog.style.display = 'flex';
+    
+    // Reset form
+    document.getElementById('taskDescription').value = '';
+    document.getElementById('systemPrompt').value = '';
+    document.getElementById('newRule').value = '';
+    customRules = [];
+    
+    // Reset safety checks
+    document.querySelectorAll('.safety-checks input[type="checkbox"]')
+        .forEach(checkbox => checkbox.checked = false);
+    
+    // Load default rules
+    updateRulesList();
+}
+
+function closeNewTaskDialog() {
+    const dialog = document.getElementById('newTaskDialog');
+    dialog.style.display = 'none';
+}
+
+function updateRulesList() {
+    // Update default rules
+    const defaultRulesList = document.getElementById('defaultRules');
+    defaultRulesList.innerHTML = defaultRules.map(rule => `
+        <div class="rule-item">
+            <span class="rule-text">${rule}</span>
+        </div>
+    `).join('');
+    
+    // Update custom rules
+    const customRulesList = document.getElementById('customRules');
+    customRulesList.innerHTML = customRules.map((rule, index) => `
+        <div class="rule-item">
+            <span class="rule-text">${rule}</span>
+            <button class="btn btn-danger btn-sm" onclick="removeCustomRule(${index})">×</button>
+        </div>
+    `).join('');
+}
+
+function addTaskRule() {
+    const input = document.getElementById('newRule');
+    const rule = input.value.trim();
+    
+    if (rule) {
+        customRules.push(rule);
+        input.value = '';
+        updateRulesList();
+    }
+}
+
+function removeCustomRule(index) {
+    customRules.splice(index, 1);
+    updateRulesList();
+}
+
+function validateSafetyChecks() {
+    const uncheckedBoxes = Array.from(
+        document.querySelectorAll('.safety-checks input[type="checkbox"]:not(:checked)')
+    );
+    
+    if (uncheckedBoxes.length > 0) {
+        const missingChecks = uncheckedBoxes
+            .map(box => box.parentElement.textContent.trim())
+            .join('\n- ');
+            
+        return {
+            valid: false,
+            message: `Missing safety checks:\n- ${missingChecks}`
+        };
+    }
+    
+    return { valid: true };
+}
+
+async function createTask() {
+    const description = document.getElementById('taskDescription').value.trim();
+    const systemPrompt = document.getElementById('systemPrompt').value.trim();
+    
+    if (!description) {
+        showNotification('Please provide a task description', 'error');
+        return;
+    }
+    
+    // Validate safety checks
+    const safetyValidation = validateSafetyChecks();
+    if (!safetyValidation.valid) {
+        const proceed = confirm(
+            `Warning: Some safety checks are not complete:\n${safetyValidation.message}\n\nDo you want to proceed anyway?`
+        );
+        if (!proceed) return;
+    }
+    
+    try {
+        const task = await window.electronAPI.createTask({
+            description,
+            rules: [...defaultRules, ...customRules],
+            systemPrompt
+        });
+        
+        showNotification('Task created successfully', 'success');
+        closeNewTaskDialog();
+        loadTasks();
+    } catch (error) {
+        showNotification('Error creating task: ' + error.message, 'error');
+    }
+}
+
+async function loadTasks() {
+    if (!currentProject) {
+        document.getElementById('activeTasks').innerHTML = '<div class="no-project">No project selected</div>';
+        document.getElementById('archivedTasks').innerHTML = '<div class="no-project">No project selected</div>';
+        return;
+    }
+
+    try {
+        const tasks = await window.electronAPI.listTasks();
+        
+        const activeContainer = document.getElementById('activeTasks');
+        const archivedContainer = document.getElementById('archivedTasks');
+        
+        activeContainer.innerHTML = '';
+        archivedContainer.innerHTML = '';
+
+        // Render active tasks
+        tasks.active.forEach(task => {
+            const container = activeContainer;
+            const item = document.createElement('div');
+            item.className = 'task-item';
+            item.innerHTML = `
+                <div class="task-header">
+                    <span class="task-title">${task.title}</span>
+                    <button class="btn btn-secondary btn-sm" onclick="archiveTask('${task.id}')">
+                        Archive
+                    </button>
+                </div>
+                <div class="task-rules">
+                    <h4>Rules:</h4>
+                    <ul>
+                        ${task.rules.map(rule => `
+                            <li class="rule-item">
+                                <span class="rule-text">${rule}</span>
+                            </li>
+                        `).join('')}
+                    </ul>
+                </div>
+                <div class="task-prompt">
+                    <h4>System Prompt:</h4>
+                    <div class="prompt-text">${task.systemPrompt}</div>
+                </div>
+            `;
+            container.appendChild(item);
+        });
+
+        // Render archived tasks
+        tasks.archived.forEach(task => {
+            const container = archivedContainer;
+            const item = document.createElement('div');
+            item.className = 'task-item archived';
+            item.innerHTML = `
+                <div class="task-header">
+                    <span class="task-title">${task.title}</span>
+                    <span class="task-status">Archived</span>
+                </div>
+                <div class="task-rules">
+                    <h4>Rules:</h4>
+                    <ul>
+                        ${task.rules.map(rule => `
+                            <li class="rule-item">
+                                <span class="rule-text">${rule}</span>
+                            </li>
+                        `).join('')}
+                    </ul>
+                </div>
+            `;
+            container.appendChild(item);
+        });
+    } catch (error) {
+        showNotification('Error loading tasks: ' + error.message, 'error');
+    }
+}
+
+async function archiveTask(taskId) {
+    try {
+        await window.electronAPI.archiveTask(taskId);
+        showNotification('Task archived successfully', 'success');
+        loadTasks();
+    } catch (error) {
+        showNotification('Error archiving task: ' + error.message, 'error');
+    }
+}
 
 // Project Management
 async function selectProject() {
@@ -43,7 +237,6 @@ async function selectProject() {
         if (project) {
             currentProject = project;
             updateProjectDisplay();
-            loadIntegrationStatus();
             loadTasks();
             showNotification('Project loaded successfully', 'success');
         }
@@ -69,239 +262,103 @@ function updateProjectDisplay() {
     }
 }
 
-// Integration Management
-function toggleIntegrationScope() {
-    isGlobalIntegrations = document.getElementById('globalIntegrations').checked;
-    const scopeHint = document.getElementById('scopeHint');
-    scopeHint.textContent = isGlobalIntegrations ? 
-        'Using global integrations' : 
-        'Using project-specific integrations';
-    
-    loadIntegrationStatus();
-}
-
-async function configureAtlassian() {
-    if (!currentProject && !isGlobalIntegrations) {
-        showNotification('Please select a project or use global integrations', 'error');
-        return;
-    }
-
-    const domain = document.getElementById('atlassianDomain').value;
-    const email = document.getElementById('atlassianEmail').value;
-    const apiToken = document.getElementById('atlassianToken').value;
-    const products = Array.from(document.querySelectorAll('input[type="checkbox"]:checked'))
-        .map(cb => cb.value);
-
-    if (!domain || !email || !apiToken) {
-        showNotification('Please fill in all Atlassian fields', 'error');
-        return;
-    }
-
+// Credential Management
+async function importFromKeys() {
     try {
-        const success = await window.electronAPI.configureAtlassian({
-            domain,
-            email,
-            apiToken,
-            products
-        }, isGlobalIntegrations);
-
+        const success = await window.electronAPI.importCredentials('keys');
         if (success) {
-            showNotification('Atlassian integration configured successfully', 'success');
-            loadIntegrationStatus();
+            showNotification('Successfully imported credentials from keys.txt', 'success');
+            loadCredentialsList();
         } else {
-            showNotification('Failed to configure Atlassian integration', 'error');
+            showNotification('Failed to import credentials from keys.txt', 'error');
         }
     } catch (error) {
-        showNotification('Error configuring Atlassian integration: ' + error.message, 'error');
+        showNotification('Error importing credentials: ' + error.message, 'error');
     }
 }
 
-async function configureDigitalOcean() {
-    if (!currentProject && !isGlobalIntegrations) {
-        showNotification('Please select a project or use global integrations', 'error');
-        return;
-    }
-
-    const apiKey = document.getElementById('doApiKey').value;
-    const spacesKey = document.getElementById('doSpacesKey').value;
-    const spacesSecret = document.getElementById('doSpacesSecret').value;
-
-    if (!apiKey) {
-        showNotification('API Key is required', 'error');
-        return;
-    }
-
+async function importFromVSCode() {
     try {
-        const success = await window.electronAPI.configureDigitalOcean({
-            apiKey,
-            spacesKey,
-            spacesSecret
-        }, isGlobalIntegrations);
-
+        const success = await window.electronAPI.importCredentials('vscode');
         if (success) {
-            showNotification('Digital Ocean integration configured successfully', 'success');
-            loadIntegrationStatus();
+            showNotification('Successfully imported credentials from VS Code', 'success');
+            loadCredentialsList();
         } else {
-            showNotification('Failed to configure Digital Ocean integration', 'error');
+            showNotification('Failed to import credentials from VS Code', 'error');
         }
     } catch (error) {
-        showNotification('Error configuring Digital Ocean integration: ' + error.message, 'error');
+        showNotification('Error importing credentials: ' + error.message, 'error');
     }
 }
 
-async function importSSHConfig() {
-    if (!currentProject && !isGlobalIntegrations) {
-        showNotification('Please select a project or use global integrations', 'error');
-        return;
-    }
+async function loadCredentialsList() {
+    const container = document.getElementById('credentialsList');
+    container.innerHTML = '';
 
     try {
-        const success = await window.electronAPI.importSSHConfig(isGlobalIntegrations);
-        if (success) {
-            showNotification('SSH configurations imported successfully', 'success');
-            loadSSHConfigs();
-        } else {
-            showNotification('Failed to import SSH configurations', 'error');
-        }
-    } catch (error) {
-        showNotification('Error importing SSH configurations: ' + error.message, 'error');
-    }
-}
+        // Create sections for different credential types
+        const sections = {
+            'Atlassian': await window.electronAPI.getCredentials('atlassian', 'atlassian'),
+            'Digital Ocean': await window.electronAPI.getCredentials('digitalocean', 'digitalocean'),
+            'GitHub': await window.electronAPI.getCredentials('github', 'github'),
+            'Google': await window.electronAPI.getCredentials('google', 'google')
+        };
 
-async function loadIntegrationStatus() {
-    try {
-        // Load Atlassian status
-        const atlassianCreds = await window.electronAPI.getCredentials(
-            'atlassian', 
-            'atlassian', 
-            isGlobalIntegrations
-        );
-        
-        if (atlassianCreds) {
-            document.getElementById('atlassianDomain').value = atlassianCreds.credentials.domain;
-            document.getElementById('atlassianEmail').value = atlassianCreds.credentials.email;
-            // Don't populate the API token for security
-            atlassianCreds.credentials.products.forEach(product => {
-                const checkbox = document.querySelector(`input[value="${product}"]`);
-                if (checkbox) checkbox.checked = true;
-            });
-        } else {
-            // Clear form if no credentials found
-            document.getElementById('atlassianDomain').value = '';
-            document.getElementById('atlassianEmail').value = '';
-            document.getElementById('atlassianToken').value = '';
-            document.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
-        }
-
-        // Load Digital Ocean status
-        const doCreds = await window.electronAPI.getCredentials(
-            'digitalocean', 
-            'digitalocean', 
-            isGlobalIntegrations
-        );
-        
-        if (doCreds) {
-            document.getElementById('doSpacesKey').value = doCreds.credentials.spaces?.key || '';
-            // Don't populate sensitive fields for security
-        } else {
-            // Clear form if no credentials found
-            document.getElementById('doApiKey').value = '';
-            document.getElementById('doSpacesKey').value = '';
-            document.getElementById('doSpacesSecret').value = '';
-        }
-
-        // Load SSH configs
-        loadSSHConfigs();
-    } catch (error) {
-        showNotification('Error loading integration status: ' + error.message, 'error');
-    }
-}
-
-async function loadSSHConfigs() {
-    try {
-        const configs = await window.electronAPI.getCredentials('ssh', 'ssh', isGlobalIntegrations);
-        const container = document.getElementById('sshConfigs');
-        container.innerHTML = '';
-
-        if (configs) {
-            Object.entries(configs.credentials).forEach(([host, config]) => {
-                const item = document.createElement('div');
-                item.className = 'ssh-config-item';
-                item.innerHTML = `
-                    <div class="ssh-config-header">
-                        <span class="ssh-host">${host}</span>
-                        <button class="btn btn-secondary btn-sm" onclick="testSSHConnection('${host}')">
-                            Test Connection
-                        </button>
-                    </div>
-                    <div class="ssh-config-details">
-                        <div>User: ${config.user || 'default'}</div>
-                        <div>Host: ${config.hostname || host}</div>
-                        ${config.port ? `<div>Port: ${config.port}</div>` : ''}
+        for (const [name, creds] of Object.entries(sections)) {
+            if (creds) {
+                const section = document.createElement('div');
+                section.className = 'credential-section';
+                section.innerHTML = `
+                    <h4>${name}</h4>
+                    <div class="credential-details">
+                        ${formatCredentialDetails(name, creds.credentials)}
                     </div>
                 `;
-                container.appendChild(item);
-            });
+                container.appendChild(section);
+            }
+        }
+
+        if (container.children.length === 0) {
+            container.innerHTML = '<div class="no-credentials">No credentials imported yet</div>';
         }
     } catch (error) {
-        showNotification('Error loading SSH configurations: ' + error.message, 'error');
+        console.error('Error loading credentials:', error);
+        container.innerHTML = '<div class="error">Error loading credentials</div>';
     }
 }
 
-// Task Management
-async function createNewTask() {
-    if (!currentProject) {
-        showNotification('Please select a project first', 'error');
-        return;
-    }
-
-    const description = prompt('Enter task description:');
-    if (description) {
-        try {
-            const taskId = await window.electronAPI.createTask(description);
-            showNotification('Task created successfully', 'success');
-            loadTasks();
-        } catch (error) {
-            showNotification('Error creating task: ' + error.message, 'error');
-        }
-    }
-}
-
-async function loadTasks() {
-    if (!currentProject) {
-        document.getElementById('activeTasks').innerHTML = '<div class="no-project">No project selected</div>';
-        document.getElementById('archivedTasks').innerHTML = '<div class="no-project">No project selected</div>';
-        return;
-    }
-
-    try {
-        const tasks = await window.electronAPI.listTasks();
-        const activeContainer = document.getElementById('activeTasks');
-        const archivedContainer = document.getElementById('archivedTasks');
-        
-        activeContainer.innerHTML = '';
-        archivedContainer.innerHTML = '';
-
-        tasks.forEach(task => {
-            const container = task.status === 'archived' ? archivedContainer : activeContainer;
-            const item = document.createElement('div');
-            item.className = 'task-item';
-            item.innerHTML = `
-                <div class="task-header">
-                    <span class="task-id">${task.id}</span>
-                    <span class="task-status">${task.status}</span>
-                </div>
-                <div class="task-description">${task.description}</div>
-                ${task.status !== 'archived' ? `
-                    <button class="btn btn-secondary btn-sm" onclick="archiveTask('${task.id}')">
-                        Archive
-                    </button>
+function formatCredentialDetails(type, creds) {
+    const hideValue = (value) => value ? '••••••' : 'Not set';
+    
+    switch (type) {
+        case 'Atlassian':
+            return `
+                <div>Email: ${creds.email || 'Not set'}</div>
+                <div>Domain: ${creds.domain || 'Not set'}</div>
+                <div>API Token: ${hideValue(creds.apiToken)}</div>
+            `;
+        case 'Digital Ocean':
+            return `
+                <div>API Token: ${hideValue(creds.apiToken)}</div>
+                <div>Region: ${creds.region || 'Not set'}</div>
+                ${creds.spaces ? `
+                    <div>Spaces Access Key: ${hideValue(creds.spaces.accessKey)}</div>
+                    <div>Spaces Endpoint: ${creds.spaces.endpoint || 'Not set'}</div>
                 ` : ''}
             `;
-            container.appendChild(item);
-        });
-    } catch (error) {
-        showNotification('Error loading tasks: ' + error.message, 'error');
+        case 'GitHub':
+            return `
+                <div>Username: ${creds.username || 'Not set'}</div>
+                <div>Token: ${hideValue(creds.token)}</div>
+                ${creds.source ? `<div>Source: ${creds.source}</div>` : ''}
+            `;
+        case 'Google':
+            return `
+                <div>Email: ${creds.email || 'Not set'}</div>
+                <div>MFA Type: ${creds.mfaType || 'Not set'}</div>
+            `;
+        default:
+            return '<div>No details available</div>';
     }
 }
 
@@ -327,11 +384,11 @@ function showTab(tabName) {
 
     // Load data based on tab
     switch(tabName) {
-        case 'integrations':
-            loadIntegrationStatus();
-            break;
         case 'tasks':
             loadTasks();
+            break;
+        case 'credentials':
+            loadCredentialsList();
             break;
     }
 }
@@ -380,53 +437,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // Initialize UI
     loadTasks();
-    updateCostDisplay();
-    
-    // Set up event listeners
-    window.electronAPI.onCostUpdate((event, cost) => {
-        currentCost = cost;
-        updateCostDisplay();
-    });
-
-    window.electronAPI.onCostLimitReached(() => {
-        showNotification('Cost limit reached!', 'warning');
-    });
-
-    window.electronAPI.onTaskUpdate((event, data) => {
-        activeTasks.set(data.id, data);
-        loadTasks();
-    });
+    loadCredentialsList();
+    updateRulesList();
 });
-
-// Cost Management
-function updateCostDisplay() {
-    const costDisplay = document.getElementById('currentCost');
-    const costLimitDisplay = document.getElementById('costLimitDisplay');
-    const costProgress = document.getElementById('costProgress');
-    
-    const percentage = (currentCost / costLimit) * 100;
-    costDisplay.textContent = currentCost.toFixed(2);
-    costLimitDisplay.textContent = costLimit.toFixed(2);
-    
-    costProgress.style.width = `${percentage}%`;
-    costProgress.style.backgroundColor = colors.getProgressColor(percentage);
-}
-
-async function setCostLimit() {
-    const input = document.getElementById('costLimit');
-    const limit = parseFloat(input.value);
-    
-    if (isNaN(limit) || limit <= 0) {
-        showNotification('Please enter a valid cost limit', 'error');
-        return;
-    }
-    
-    try {
-        await window.electronAPI.setCostLimit(limit);
-        costLimit = limit;
-        updateCostDisplay();
-        showNotification('Cost limit updated successfully', 'success');
-    } catch (error) {
-        showNotification('Error updating cost limit: ' + error.message, 'error');
-    }
-}

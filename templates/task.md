@@ -1,27 +1,45 @@
 # Task: {TITLE}
 Date: $(date +%Y-%m-%d_%H-%M-%S)
 
+## Task Rules
+- [ ] Don't delete production systems
+- [ ] Always backup before making changes
+- [ ] Verify changes in staging first
+- [ ] Follow security protocols
+- [ ] Document all changes
+[Additional task-specific rules will be added here]
+
+## System Prompt
+[Task-specific system prompt that defines behavior, constraints, and objectives]
+
 ## Context
-- Previous Tasks: [Link to relevant cline tasks]
-- Related Docs: [Confluence/Git doc links]
-- Tickets: [JIRA ticket links]
+- Previous Tasks: [Link to relevant tasks]
+- Related Docs: [Documentation links]
+- Tickets: [Issue/ticket links]
 
 ## Environment
-- Staging: auth-server-staging (157.245.210.244)
-- Collectors: collectors.staging.vpc.local (10.108.0.35)
-- Database: mysql.staging.vpc.local (10.108.0.33)
-- Elasticsearch: elastic.staging.k8s.vpc.local
+- Development: [development environment details]
+- Staging: [staging environment details]
+- Production: [production environment details]
 
 ## Access Requirements
-- SSH Config: ~/.ewitness/access/ssh/config
-- DO Resources: [Relevant droplets]
-- API Keys: ~/.ewitness/access/keys/current/keys.txt
+- SSH Config: [Required SSH configurations]
+- API Keys: [Required API credentials]
+- Permissions: [Required access levels]
+
+## Safety Checks
+- [ ] Production safeguards active
+- [ ] Backup systems verified
+- [ ] Rollback plan tested
+- [ ] Access controls verified
+- [ ] Monitoring systems active
 
 ## Pre-Execution Checklist
-- [ ] Verified staging environment
+- [ ] Verified environment
 - [ ] Checked service health
 - [ ] Backed up relevant data
-- [ ] Reviewed previous related tasks
+- [ ] Reviewed previous tasks
+- [ ] Confirmed compliance with task rules
 
 ## Steps
 1. [Step details]
@@ -46,8 +64,10 @@ Date: $(date +%Y-%m-%d_%H-%M-%S)
 - [ ] Documentation updated
 - [ ] Changes verified
 - [ ] Rollback tested if applicable
+- [ ] All task rules followed
 
 ## Notes
-- Historical context: [Reference to previous similar tasks]
-- Known issues: [Document any issues encountered]
-- Future improvements: [Suggestions for future work]
+- Historical context: [Reference to previous tasks]
+- Known issues: [Document any issues]
+- Future improvements: [Suggestions]
+- Rule violations: [Document any rule exceptions/violations]

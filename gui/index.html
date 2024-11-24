@@ -21,37 +21,14 @@
 
     <div class="container">
         <div class="tab-container">
-            <button class="tab active" onclick="showTab('commands')">Commands</button>
-            <button class="tab" onclick="showTab('tasks')">Tasks</button>
-            <button class="tab" onclick="showTab('integrations')">Integrations</button>
+            <button class="tab active" onclick="showTab('tasks')">Tasks</button>
+            <button class="tab" onclick="showTab('credentials')">Credentials</button>
             <button class="tab" onclick="showTab('settings')">Settings</button>
         </div>
 
-        <div id="commands" class="content active">
-            <div class="command-settings">
-                <label class="switch">
-                    <input type="checkbox" id="autoRun">
-                    <span class="slider"></span>
-                    Auto-run commands
-                </label>
-                <label class="switch">
-                    <input type="checkbox" id="autoSave">
-                    <span class="slider"></span>
-                    Auto-save commands
-                </label>
-            </div>
-
-            <div class="command-section">
-                <h3>Recent Commands</h3>
-                <div id="recentCommands" class="command-list">
-                    <!-- Commands will be added here -->
-                </div>
-            </div>
-        </div>
-
-        <div id="tasks" class="content">
+        <div id="tasks" class="content active">
             <div class="task-actions">
-                <button class="btn btn-primary" onclick="createNewTask()">New Task</button>
+                <button class="btn btn-primary" onclick="showNewTaskDialog()">New Task</button>
             </div>
 
             <div class="task-section">
@@ -67,87 +44,87 @@
                     <!-- Archived tasks will be listed here -->
                 </div>
             </div>
-        </div>
 
-        <div id="integrations" class="content">
-            <div class="integration-scope">
-                <label class="switch">
-                    <input type="checkbox" id="globalIntegrations" onchange="toggleIntegrationScope()">
-                    <span class="slider"></span>
-                    Use Global Integrations
-                </label>
-                <span class="scope-hint" id="scopeHint">
-                    Currently using project-specific integrations
-                </span>
-            </div>
+            <!-- New Task Dialog -->
+            <div id="newTaskDialog" class="dialog">
+                <div class="dialog-content">
+                    <h3>Create New Task</h3>
+                    <div class="form-group">
+                        <label>Description</label>
+                        <input type="text" id="taskDescription" class="form-control" placeholder="Task description">
+                    </div>
 
-            <div class="integration-section">
-                <h3>Atlassian Integration</h3>
-                <div class="integration-form">
                     <div class="form-group">
-                        <label>Domain</label>
-                        <input type="text" id="atlassianDomain" class="form-control" placeholder="your-domain.atlassian.net">
+                        <label>System Prompt</label>
+                        <textarea id="systemPrompt" class="form-control" rows="4" 
+                            placeholder="Define task behavior, constraints, and objectives"></textarea>
                     </div>
+
                     <div class="form-group">
-                        <label>Email</label>
-                        <input type="email" id="atlassianEmail" class="form-control" placeholder="your@email.com">
+                        <label>Task Rules</label>
+                        <div id="defaultRules" class="rule-list">
+                            <!-- Default rules will be listed here -->
+                        </div>
+                        <div class="rule-input">
+                            <input type="text" id="newRule" class="form-control" placeholder="Add new rule">
+                            <button class="btn btn-secondary" onclick="addTaskRule()">Add Rule</button>
+                        </div>
+                        <div id="customRules" class="rule-list">
+                            <!-- Custom rules will be listed here -->
+                        </div>
                     </div>
+
                     <div class="form-group">
-                        <label>API Token</label>
-                        <input type="password" id="atlassianToken" class="form-control" placeholder="API Token">
-                    </div>
-                    <div class="form-group">
-                        <label>Products</label>
-                        <div class="checkbox-group">
-                            <label>
-                                <input type="checkbox" value="jira" checked> Jira
+                        <label>Safety Checks</label>
+                        <div class="safety-checks">
+                            <label class="checkbox">
+                                <input type="checkbox" id="productionSafeguard">
+                                Production safeguards active
                             </label>
-                            <label>
-                                <input type="checkbox" value="confluence" checked> Confluence
+                            <label class="checkbox">
+                                <input type="checkbox" id="backupVerified">
+                                Backup systems verified
                             </label>
-                            <label>
-                                <input type="checkbox" value="bitbucket"> Bitbucket
+                            <label class="checkbox">
+                                <input type="checkbox" id="rollbackTested">
+                                Rollback plan tested
+                            </label>
+                            <label class="checkbox">
+                                <input type="checkbox" id="accessVerified">
+                                Access controls verified
+                            </label>
+                            <label class="checkbox">
+                                <input type="checkbox" id="monitoringActive">
+                                Monitoring systems active
                             </label>
                         </div>
                     </div>
-                    <div class="form-actions">
-                        <button class="btn btn-primary" onclick="configureAtlassian()">Configure</button>
-                        <button class="btn btn-secondary" onclick="testAtlassianConnection()">Test Connection</button>
+
+                    <div class="dialog-actions">
+                        <button class="btn btn-primary" onclick="createTask()">Create Task</button>
+                        <button class="btn btn-secondary" onclick="closeNewTaskDialog()">Cancel</button>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="credentials" class="content">
+            <div class="quick-import">
+                <h3>Quick Import</h3>
+                <div class="import-actions">
+                    <button class="btn btn-primary" onclick="importFromKeys()">
+                        Import from keys.txt
+                    </button>
+                    <button class="btn btn-primary" onclick="importFromVSCode()">
+                        Import from VS Code
+                    </button>
                 </div>
             </div>
 
             <div class="integration-section">
-                <h3>Digital Ocean Integration</h3>
-                <div class="integration-form">
-                    <div class="form-group">
-                        <label>API Key</label>
-                        <input type="password" id="doApiKey" class="form-control" placeholder="Digital Ocean API Key">
-                    </div>
-                    <div class="form-group">
-                        <label>Spaces Access Key</label>
-                        <input type="text" id="doSpacesKey" class="form-control" placeholder="Spaces Access Key">
-                    </div>
-                    <div class="form-group">
-                        <label>Spaces Secret Key</label>
-                        <input type="password" id="doSpacesSecret" class="form-control" placeholder="Spaces Secret Key">
-                    </div>
-                    <div class="form-actions">
-                        <button class="btn btn-primary" onclick="configureDigitalOcean()">Configure</button>
-                        <button class="btn btn-secondary" onclick="testDigitalOceanConnection()">Test Connection</button>
-                    </div>
-                </div>
-            </div>
-
-            <div class="integration-section">
-                <h3>SSH Configuration</h3>
-                <div class="integration-form">
-                    <div class="form-group">
-                        <button class="btn btn-primary" onclick="importSSHConfig()">Import from VS Code</button>
-                    </div>
-                    <div id="sshConfigs" class="ssh-list">
-                        <!-- SSH configs will be listed here -->
-                    </div>
+                <h3>Imported Credentials</h3>
+                <div id="credentialsList" class="credential-list">
+                    <!-- Credentials will be listed here -->
                 </div>
             </div>
         </div>
@@ -159,6 +136,17 @@
                     <div>No project selected</div>
                 </div>
                 <button class="btn btn-primary" onclick="selectProject()">Change Project</button>
+            </div>
+
+            <div class="settings-section">
+                <h3>Default Task Rules</h3>
+                <div id="defaultTaskRules" class="rule-list">
+                    <!-- Default rules will be listed here -->
+                </div>
+                <div class="rule-input">
+                    <input type="text" id="newDefaultRule" class="form-control" placeholder="Add new default rule">
+                    <button class="btn btn-secondary" onclick="addDefaultRule()">Add Rule</button>
+                </div>
             </div>
 
             <div class="settings-section">

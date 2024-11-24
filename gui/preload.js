@@ -9,26 +9,19 @@ contextBridge.exposeInMainWorld('electronAPI', {
     selectProject: () => ipcRenderer.invoke('selectProject'),
     getCurrentProject: () => ipcRenderer.invoke('getCurrentProject'),
     
-    // Command execution
-    executeCommand: (command) => ipcRenderer.invoke('executeCommand', command),
-    
     // Task management
-    createTask: (description) => ipcRenderer.invoke('createTask', description),
+    createTask: (params) => ipcRenderer.invoke('createTask', params),
     listTasks: () => ipcRenderer.invoke('listTasks'),
     archiveTask: (taskId) => ipcRenderer.invoke('archiveTask', taskId),
+    updateTaskRules: (params) => ipcRenderer.invoke('updateTaskRules', params),
     
     // Cost management
     setCostLimit: (limit) => ipcRenderer.invoke('setCostLimit', limit),
     
-    // Service Integrations
-    configureAtlassian: (credentials, isGlobal) => 
-        ipcRenderer.invoke('configureAtlassian', { credentials, isGlobal }),
-    configureDigitalOcean: (credentials, isGlobal) => 
-        ipcRenderer.invoke('configureDigitalOcean', { credentials, isGlobal }),
-    importSSHConfig: (isGlobal) => 
-        ipcRenderer.invoke('importSSHConfig', { isGlobal }),
-    getCredentials: (service, type, isGlobal) => 
-        ipcRenderer.invoke('getCredentials', { service, type, isGlobal }),
+    // Credential Management
+    importCredentials: (source) => ipcRenderer.invoke('importCredentials', source),
+    configureGitHub: (credentials) => ipcRenderer.invoke('configureGitHub', credentials),
+    getCredentials: (service, type) => ipcRenderer.invoke('getCredentials', { service, type }),
     
     // Event listeners
     onCommandExecuted: (callback) => ipcRenderer.on('command-executed', callback),

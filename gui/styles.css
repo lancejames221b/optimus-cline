@@ -31,9 +31,33 @@ body {
     padding: 0 10px;
 }
 
+.titlebar-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
 .titlebar-title {
     font-size: 14px;
     color: var(--text);
+}
+
+.project-select {
+    background: none;
+    border: none;
+    color: var(--text);
+    padding: 4px 8px;
+    font-size: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    -webkit-app-region: no-drag;
+}
+
+.project-select-icon {
+    font-size: 8px;
+    color: var(--text-secondary);
 }
 
 .titlebar-controls {
@@ -106,6 +130,37 @@ body {
     display: block;
 }
 
+/* Dialog */
+.dialog {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+}
+
+.dialog-content {
+    background: var(--background);
+    padding: 20px;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 600px;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+}
+
 /* Forms */
 .form-group {
     margin-bottom: 15px;
@@ -128,112 +183,124 @@ body {
     font-size: 14px;
 }
 
+textarea.form-control {
+    resize: vertical;
+    min-height: 80px;
+}
+
 .form-control:focus {
     outline: none;
     border-color: var(--primary);
 }
 
-.form-actions {
-    display: flex;
-    gap: 10px;
-    margin-top: 15px;
-}
-
-/* Integration Sections */
-.integration-section {
-    background: var(--background-light);
-    border-radius: 8px;
-    padding: 20px;
-    margin-bottom: 20px;
-}
-
-.integration-section h3 {
-    margin-top: 0;
-    margin-bottom: 15px;
-    color: var(--text);
-}
-
-.integration-form {
-    max-width: 500px;
-}
-
-.checkbox-group {
-    display: flex;
-    gap: 15px;
-}
-
-.checkbox-group label {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    cursor: pointer;
-}
-
-/* SSH Configuration */
-.ssh-list {
-    margin-top: 15px;
-}
-
-.ssh-config-item {
-    background: var(--background);
-    border-radius: 4px;
-    padding: 12px;
-    margin-bottom: 10px;
-}
-
-.ssh-config-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 8px;
-}
-
-.ssh-host {
-    font-weight: bold;
-    color: var(--accent);
-}
-
-.ssh-config-details {
-    font-size: 14px;
-    color: var(--text-secondary);
-}
-
 /* Task Management */
-.task-actions {
-    margin-bottom: 20px;
-}
-
-.task-section {
-    margin-bottom: 30px;
-}
-
 .task-item {
     background: var(--background-light);
-    border-radius: 6px;
+    border-radius: 8px;
     padding: 15px;
-    margin-bottom: 10px;
+    margin-bottom: 15px;
 }
 
 .task-header {
     display: flex;
     justify-content: space-between;
-    margin-bottom: 8px;
+    align-items: center;
+    margin-bottom: 10px;
 }
 
-.task-id {
+.task-title {
+    font-weight: bold;
     color: var(--accent);
-    font-family: monospace;
 }
 
 .task-status {
     padding: 2px 8px;
     border-radius: 12px;
     font-size: 12px;
-    background: var(--primary);
+    background: var(--secondary);
+    color: var(--text-secondary);
 }
 
-.task-description {
+.task-rules {
+    margin: 10px 0;
+}
+
+.task-rules h4 {
+    margin: 0 0 8px 0;
     color: var(--text-secondary);
+    font-size: 14px;
+}
+
+.task-rules ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.rule-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 8px;
+    margin-bottom: 4px;
+    background: var(--background);
+    border-radius: 4px;
+}
+
+.rule-text {
+    color: var(--text);
+    font-size: 14px;
+}
+
+.task-prompt {
+    margin: 10px 0;
+}
+
+.task-prompt h4 {
+    margin: 0 0 8px 0;
+    color: var(--text-secondary);
+    font-size: 14px;
+}
+
+.prompt-text {
+    padding: 8px;
+    background: var(--background);
+    border-radius: 4px;
+    font-size: 14px;
+    color: var(--text);
+    white-space: pre-wrap;
+}
+
+/* Safety Checks */
+.safety-checks {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.checkbox {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--text);
+}
+
+.checkbox input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
+/* Rule Management */
+.rule-list {
+    margin-bottom: 10px;
+}
+
+.rule-input {
+    display: flex;
+    gap: 10px;
     margin-bottom: 10px;
 }
 
@@ -257,16 +324,6 @@ body {
     color: var(--text);
 }
 
-.btn-success {
-    background: var(--success);
-    color: white;
-}
-
-.btn-warning {
-    background: var(--warning);
-    color: black;
-}
-
 .btn-danger {
     background: var(--danger);
     color: white;
@@ -275,27 +332,6 @@ body {
 .btn-sm {
     padding: 4px 8px;
     font-size: 12px;
-}
-
-/* Cost Tracker */
-.cost-tracker {
-    background: var(--background-light);
-    padding: 15px;
-    border-radius: 6px;
-}
-
-.progress-bar {
-    height: 8px;
-    background: var(--background);
-    border-radius: 4px;
-    margin-top: 10px;
-    overflow: hidden;
-}
-
-.progress {
-    height: 100%;
-    background: var(--success);
-    transition: width 0.3s ease;
 }
 
 /* Notification */
