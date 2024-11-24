@@ -1,77 +1,44 @@
 const { contextBridge, ipcRenderer } = require('electron');
-const keytar = require('keytar');
 
-// Secure credential management
-contextBridge.exposeInMainWorld('credentials', {
-    // Store credentials securely
-    store: async (service, account, password) => {
-        try {
-            await keytar.setPassword(service, account, password);
-            return true;
-        } catch (error) {
-            console.error('Error saving credential:', error);
-            return false;
-        }
-    },
-
-    // Retrieve credentials
-    get: async (service, account) => {
-        try {
-            return await keytar.getPassword(service, account);
-        } catch (error) {
-            console.error('Error getting credential:', error);
-            return null;
-        }
-    },
-
-    // List all credentials for a service
-    list: async (service) => {
-        try {
-            return await keytar.findCredentials(service);
-        } catch (error) {
-            console.error('Error listing credentials:', error);
-            return [];
-        }
-    }
-});
-
-// Command execution
-contextBridge.exposeInMainWorld('commands', {
-    execute: (command) => ipcRenderer.invoke('executeCommand', command),
+contextBridge.exposeInMainWorld('electronAPI', {
+    // Window controls
+    minimizeWindow: () => ipcRenderer.send('minimize-window'),
+    closeWindow: () => ipcRenderer.send('close-window'),
+    
+    // Project management
+    selectProject: () => ipcRenderer.invoke('selectProject'),
+    getCurrentProject: () => ipcRenderer.invoke('getCurrentProject'),
+    
+    // Command execution
+    executeCommand: (command) => ipcRenderer.invoke('executeCommand', command),
+    
+    // Task management
+    createTask: (description) => ipcRenderer.invoke('createTask', description),
+    listTasks: () => ipcRenderer.invoke('listTasks'),
+    archiveTask: (taskId) => ipcRenderer.invoke('archiveTask', taskId),
+    
+    // Cost management
     setCostLimit: (limit) => ipcRenderer.invoke('setCostLimit', limit),
+    
+    // Service Integrations
+    configureAtlassian: (credentials, isGlobal) => 
+        ipcRenderer.invoke('configureAtlassian', { credentials, isGlobal }),
+    configureDigitalOcean: (credentials, isGlobal) => 
+        ipcRenderer.invoke('configureDigitalOcean', { credentials, isGlobal }),
+    importSSHConfig: (isGlobal) => 
+        ipcRenderer.invoke('importSSHConfig', { isGlobal }),
+    getCredentials: (service, type, isGlobal) => 
+        ipcRenderer.invoke('getCredentials', { service, type, isGlobal }),
+    
+    // Event listeners
+    onCommandExecuted: (callback) => ipcRenderer.on('command-executed', callback),
     onCostUpdate: (callback) => ipcRenderer.on('cost-update', callback),
-    onLimitReached: (callback) => ipcRenderer.on('cost-limit-reached', callback)
-});
-
-// Window controls
-contextBridge.exposeInMainWorld('window', {
-    minimize: () => ipcRenderer.send('minimize-window'),
-    close: () => ipcRenderer.send('close-window')
-});
-
-// Task management
-contextBridge.exposeInMainWorld('tasks', {
-    create: (name) => ipcRenderer.invoke('createTask', name),
-    list: () => ipcRenderer.invoke('listTasks'),
-    archive: (taskId) => ipcRenderer.invoke('archiveTask', taskId)
-});
-
-// History management
-contextBridge.exposeInMainWorld('history', {
-    save: (command, result) => ipcRenderer.invoke('saveHistory', { command, result }),
-    load: () => ipcRenderer.invoke('loadHistory'),
-    createCheckpoint: (name) => ipcRenderer.invoke('createCheckpoint', name),
-    revertToCheckpoint: (name) => ipcRenderer.invoke('revertToCheckpoint', name),
-    getCheckpoints: () => ipcRenderer.invoke('getCheckpoints')
-});
-
-// Notifications
-contextBridge.exposeInMainWorld('notifications', {
-    show: (message, type = 'info') => {
-        const notification = document.createElement('div');
-        notification.className = `notification ${type}`;
-        notification.textContent = message;
-        document.body.appendChild(notification);
-        setTimeout(() => notification.remove(), 3000);
-    }
+    onCostLimitReached: (callback) => ipcRenderer.on('cost-limit-reached', callback),
+    onTaskUpdate: (callback) => ipcRenderer.on('task-update', callback),
+    
+    // Remove event listeners
+    removeCommandListener: () => ipcRenderer.removeAllListeners('command-executed'),
+    removeCostUpdateListener: () => ipcRenderer.removeAllListeners('cost-update'),
+    removeCostLimitListener: () => ipcRenderer.removeAllListeners('cost-limit-reached'),
+    removeTaskUpdateListener: () => ipcRenderer.removeAllListeners('task-update')
 });

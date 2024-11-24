@@ -6,7 +6,13 @@
 </head>
 <body>
     <div class="titlebar">
-        <div class="titlebar-title">Cline</div>
+        <div class="titlebar-left">
+            <div class="titlebar-title">Cline</div>
+            <button id="projectSelector" class="project-select" onclick="selectProject()">
+                <span id="currentProject">No Project Selected</span>
+                <span class="project-select-icon">▼</span>
+            </button>
+        </div>
         <div class="titlebar-controls">
             <button class="titlebar-button minimize" onclick="minimizeWindow()"></button>
             <button class="titlebar-button close" onclick="closeWindow()"></button>
@@ -16,7 +22,8 @@
     <div class="container">
         <div class="tab-container">
             <button class="tab active" onclick="showTab('commands')">Commands</button>
-            <button class="tab" onclick="showTab('credentials')">Credentials</button>
+            <button class="tab" onclick="showTab('tasks')">Tasks</button>
+            <button class="tab" onclick="showTab('integrations')">Integrations</button>
             <button class="tab" onclick="showTab('settings')">Settings</button>
         </div>
 
@@ -35,13 +42,6 @@
             </div>
 
             <div class="command-section">
-                <h3>Pending Commands</h3>
-                <div id="pendingCommands" class="command-list">
-                    <!-- Commands will be added here -->
-                </div>
-            </div>
-
-            <div class="command-section">
                 <h3>Recent Commands</h3>
                 <div id="recentCommands" class="command-list">
                     <!-- Commands will be added here -->
@@ -49,40 +49,118 @@
             </div>
         </div>
 
-        <div id="credentials" class="content">
-            <div class="credential-actions">
-                <button class="btn btn-primary" onclick="addCredential()">Add New Credential</button>
-                <button class="btn btn-secondary" onclick="syncCredentials()">Sync with keys.txt</button>
+        <div id="tasks" class="content">
+            <div class="task-actions">
+                <button class="btn btn-primary" onclick="createNewTask()">New Task</button>
             </div>
 
-            <div id="credentialsList" class="credential-list">
-                <!-- Credentials will be listed here -->
+            <div class="task-section">
+                <h3>Active Tasks</h3>
+                <div id="activeTasks" class="task-list">
+                    <!-- Active tasks will be listed here -->
+                </div>
             </div>
 
-            <div id="credentialForm" class="credential-form" style="display: none;">
-                <h3>Add Credential</h3>
-                <div class="form-group">
-                    <label>Service Type</label>
-                    <select id="serviceType" class="form-control">
-                        <option value="aws">AWS</option>
-                        <option value="github">GitHub</option>
-                        <option value="digitalocean">DigitalOcean</option>
-                        <option value="database">Database</option>
-                        <option value="api">API/Service</option>
-                        <option value="custom">Custom</option>
-                    </select>
+            <div class="task-section">
+                <h3>Archived Tasks</h3>
+                <div id="archivedTasks" class="task-list">
+                    <!-- Archived tasks will be listed here -->
                 </div>
-                <div id="credentialFields">
-                    <!-- Fields will be added here -->
+            </div>
+        </div>
+
+        <div id="integrations" class="content">
+            <div class="integration-scope">
+                <label class="switch">
+                    <input type="checkbox" id="globalIntegrations" onchange="toggleIntegrationScope()">
+                    <span class="slider"></span>
+                    Use Global Integrations
+                </label>
+                <span class="scope-hint" id="scopeHint">
+                    Currently using project-specific integrations
+                </span>
+            </div>
+
+            <div class="integration-section">
+                <h3>Atlassian Integration</h3>
+                <div class="integration-form">
+                    <div class="form-group">
+                        <label>Domain</label>
+                        <input type="text" id="atlassianDomain" class="form-control" placeholder="your-domain.atlassian.net">
+                    </div>
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" id="atlassianEmail" class="form-control" placeholder="your@email.com">
+                    </div>
+                    <div class="form-group">
+                        <label>API Token</label>
+                        <input type="password" id="atlassianToken" class="form-control" placeholder="API Token">
+                    </div>
+                    <div class="form-group">
+                        <label>Products</label>
+                        <div class="checkbox-group">
+                            <label>
+                                <input type="checkbox" value="jira" checked> Jira
+                            </label>
+                            <label>
+                                <input type="checkbox" value="confluence" checked> Confluence
+                            </label>
+                            <label>
+                                <input type="checkbox" value="bitbucket"> Bitbucket
+                            </label>
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button class="btn btn-primary" onclick="configureAtlassian()">Configure</button>
+                        <button class="btn btn-secondary" onclick="testAtlassianConnection()">Test Connection</button>
+                    </div>
                 </div>
-                <div class="form-actions">
-                    <button class="btn btn-success" onclick="saveCredential()">Save</button>
-                    <button class="btn btn-secondary" onclick="cancelCredential()">Cancel</button>
+            </div>
+
+            <div class="integration-section">
+                <h3>Digital Ocean Integration</h3>
+                <div class="integration-form">
+                    <div class="form-group">
+                        <label>API Key</label>
+                        <input type="password" id="doApiKey" class="form-control" placeholder="Digital Ocean API Key">
+                    </div>
+                    <div class="form-group">
+                        <label>Spaces Access Key</label>
+                        <input type="text" id="doSpacesKey" class="form-control" placeholder="Spaces Access Key">
+                    </div>
+                    <div class="form-group">
+                        <label>Spaces Secret Key</label>
+                        <input type="password" id="doSpacesSecret" class="form-control" placeholder="Spaces Secret Key">
+                    </div>
+                    <div class="form-actions">
+                        <button class="btn btn-primary" onclick="configureDigitalOcean()">Configure</button>
+                        <button class="btn btn-secondary" onclick="testDigitalOceanConnection()">Test Connection</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="integration-section">
+                <h3>SSH Configuration</h3>
+                <div class="integration-form">
+                    <div class="form-group">
+                        <button class="btn btn-primary" onclick="importSSHConfig()">Import from VS Code</button>
+                    </div>
+                    <div id="sshConfigs" class="ssh-list">
+                        <!-- SSH configs will be listed here -->
+                    </div>
                 </div>
             </div>
         </div>
 
         <div id="settings" class="content">
+            <div class="settings-section">
+                <h3>Project Settings</h3>
+                <div class="project-info" id="projectInfo">
+                    <div>No project selected</div>
+                </div>
+                <button class="btn btn-primary" onclick="selectProject()">Change Project</button>
+            </div>
+
             <div class="settings-section">
                 <h3>Cost Control</h3>
                 <div class="form-group">
@@ -103,6 +181,11 @@
                 </div>
             </div>
         </div>
+    </div>
+
+    <div id="notification" class="notification" style="display: none">
+        <span id="notificationMessage"></span>
+        <button class="notification-close" onclick="closeNotification()">×</button>
     </div>
 
     <script src="renderer.js"></script>

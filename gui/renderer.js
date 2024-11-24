@@ -1,18 +1,10 @@
-// Imports
-const { ipcRenderer } = require('electron');
-
 // State management
 let currentCost = 0;
 let costLimit = 100;
-let pendingCommands = [];
 let recentCommands = [];
-
-// UI Elements
-const costDisplay = document.getElementById('currentCost');
-const costLimitDisplay = document.getElementById('costLimitDisplay');
-const costProgress = document.getElementById('costProgress');
-const autoRunToggle = document.getElementById('autoRun');
-const autoSaveToggle = document.getElementById('autoSave');
+let activeTasks = new Map();
+let currentProject = null;
+let isGlobalIntegrations = false;
 
 // Theme colors with opacity
 const colors = {
@@ -44,6 +36,275 @@ const animations = {
     ]
 };
 
+// Project Management
+async function selectProject() {
+    try {
+        const project = await window.electronAPI.selectProject();
+        if (project) {
+            currentProject = project;
+            updateProjectDisplay();
+            loadIntegrationStatus();
+            loadTasks();
+            showNotification('Project loaded successfully', 'success');
+        }
+    } catch (error) {
+        showNotification('Error selecting project: ' + error.message, 'error');
+    }
+}
+
+function updateProjectDisplay() {
+    const projectDisplay = document.getElementById('currentProject');
+    const projectInfo = document.getElementById('projectInfo');
+    
+    if (currentProject) {
+        projectDisplay.textContent = currentProject.name;
+        projectInfo.innerHTML = `
+            <div><strong>Name:</strong> ${currentProject.name}</div>
+            <div><strong>Path:</strong> ${currentProject.path}</div>
+            <div><strong>Config:</strong> ${currentProject.configPath}</div>
+        `;
+    } else {
+        projectDisplay.textContent = 'No Project Selected';
+        projectInfo.innerHTML = '<div>No project selected</div>';
+    }
+}
+
+// Integration Management
+function toggleIntegrationScope() {
+    isGlobalIntegrations = document.getElementById('globalIntegrations').checked;
+    const scopeHint = document.getElementById('scopeHint');
+    scopeHint.textContent = isGlobalIntegrations ? 
+        'Using global integrations' : 
+        'Using project-specific integrations';
+    
+    loadIntegrationStatus();
+}
+
+async function configureAtlassian() {
+    if (!currentProject && !isGlobalIntegrations) {
+        showNotification('Please select a project or use global integrations', 'error');
+        return;
+    }
+
+    const domain = document.getElementById('atlassianDomain').value;
+    const email = document.getElementById('atlassianEmail').value;
+    const apiToken = document.getElementById('atlassianToken').value;
+    const products = Array.from(document.querySelectorAll('input[type="checkbox"]:checked'))
+        .map(cb => cb.value);
+
+    if (!domain || !email || !apiToken) {
+        showNotification('Please fill in all Atlassian fields', 'error');
+        return;
+    }
+
+    try {
+        const success = await window.electronAPI.configureAtlassian({
+            domain,
+            email,
+            apiToken,
+            products
+        }, isGlobalIntegrations);
+
+        if (success) {
+            showNotification('Atlassian integration configured successfully', 'success');
+            loadIntegrationStatus();
+        } else {
+            showNotification('Failed to configure Atlassian integration', 'error');
+        }
+    } catch (error) {
+        showNotification('Error configuring Atlassian integration: ' + error.message, 'error');
+    }
+}
+
+async function configureDigitalOcean() {
+    if (!currentProject && !isGlobalIntegrations) {
+        showNotification('Please select a project or use global integrations', 'error');
+        return;
+    }
+
+    const apiKey = document.getElementById('doApiKey').value;
+    const spacesKey = document.getElementById('doSpacesKey').value;
+    const spacesSecret = document.getElementById('doSpacesSecret').value;
+
+    if (!apiKey) {
+        showNotification('API Key is required', 'error');
+        return;
+    }
+
+    try {
+        const success = await window.electronAPI.configureDigitalOcean({
+            apiKey,
+            spacesKey,
+            spacesSecret
+        }, isGlobalIntegrations);
+
+        if (success) {
+            showNotification('Digital Ocean integration configured successfully', 'success');
+            loadIntegrationStatus();
+        } else {
+            showNotification('Failed to configure Digital Ocean integration', 'error');
+        }
+    } catch (error) {
+        showNotification('Error configuring Digital Ocean integration: ' + error.message, 'error');
+    }
+}
+
+async function importSSHConfig() {
+    if (!currentProject && !isGlobalIntegrations) {
+        showNotification('Please select a project or use global integrations', 'error');
+        return;
+    }
+
+    try {
+        const success = await window.electronAPI.importSSHConfig(isGlobalIntegrations);
+        if (success) {
+            showNotification('SSH configurations imported successfully', 'success');
+            loadSSHConfigs();
+        } else {
+            showNotification('Failed to import SSH configurations', 'error');
+        }
+    } catch (error) {
+        showNotification('Error importing SSH configurations: ' + error.message, 'error');
+    }
+}
+
+async function loadIntegrationStatus() {
+    try {
+        // Load Atlassian status
+        const atlassianCreds = await window.electronAPI.getCredentials(
+            'atlassian', 
+            'atlassian', 
+            isGlobalIntegrations
+        );
+        
+        if (atlassianCreds) {
+            document.getElementById('atlassianDomain').value = atlassianCreds.credentials.domain;
+            document.getElementById('atlassianEmail').value = atlassianCreds.credentials.email;
+            // Don't populate the API token for security
+            atlassianCreds.credentials.products.forEach(product => {
+                const checkbox = document.querySelector(`input[value="${product}"]`);
+                if (checkbox) checkbox.checked = true;
+            });
+        } else {
+            // Clear form if no credentials found
+            document.getElementById('atlassianDomain').value = '';
+            document.getElementById('atlassianEmail').value = '';
+            document.getElementById('atlassianToken').value = '';
+            document.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+        }
+
+        // Load Digital Ocean status
+        const doCreds = await window.electronAPI.getCredentials(
+            'digitalocean', 
+            'digitalocean', 
+            isGlobalIntegrations
+        );
+        
+        if (doCreds) {
+            document.getElementById('doSpacesKey').value = doCreds.credentials.spaces?.key || '';
+            // Don't populate sensitive fields for security
+        } else {
+            // Clear form if no credentials found
+            document.getElementById('doApiKey').value = '';
+            document.getElementById('doSpacesKey').value = '';
+            document.getElementById('doSpacesSecret').value = '';
+        }
+
+        // Load SSH configs
+        loadSSHConfigs();
+    } catch (error) {
+        showNotification('Error loading integration status: ' + error.message, 'error');
+    }
+}
+
+async function loadSSHConfigs() {
+    try {
+        const configs = await window.electronAPI.getCredentials('ssh', 'ssh', isGlobalIntegrations);
+        const container = document.getElementById('sshConfigs');
+        container.innerHTML = '';
+
+        if (configs) {
+            Object.entries(configs.credentials).forEach(([host, config]) => {
+                const item = document.createElement('div');
+                item.className = 'ssh-config-item';
+                item.innerHTML = `
+                    <div class="ssh-config-header">
+                        <span class="ssh-host">${host}</span>
+                        <button class="btn btn-secondary btn-sm" onclick="testSSHConnection('${host}')">
+                            Test Connection
+                        </button>
+                    </div>
+                    <div class="ssh-config-details">
+                        <div>User: ${config.user || 'default'}</div>
+                        <div>Host: ${config.hostname || host}</div>
+                        ${config.port ? `<div>Port: ${config.port}</div>` : ''}
+                    </div>
+                `;
+                container.appendChild(item);
+            });
+        }
+    } catch (error) {
+        showNotification('Error loading SSH configurations: ' + error.message, 'error');
+    }
+}
+
+// Task Management
+async function createNewTask() {
+    if (!currentProject) {
+        showNotification('Please select a project first', 'error');
+        return;
+    }
+
+    const description = prompt('Enter task description:');
+    if (description) {
+        try {
+            const taskId = await window.electronAPI.createTask(description);
+            showNotification('Task created successfully', 'success');
+            loadTasks();
+        } catch (error) {
+            showNotification('Error creating task: ' + error.message, 'error');
+        }
+    }
+}
+
+async function loadTasks() {
+    if (!currentProject) {
+        document.getElementById('activeTasks').innerHTML = '<div class="no-project">No project selected</div>';
+        document.getElementById('archivedTasks').innerHTML = '<div class="no-project">No project selected</div>';
+        return;
+    }
+
+    try {
+        const tasks = await window.electronAPI.listTasks();
+        const activeContainer = document.getElementById('activeTasks');
+        const archivedContainer = document.getElementById('archivedTasks');
+        
+        activeContainer.innerHTML = '';
+        archivedContainer.innerHTML = '';
+
+        tasks.forEach(task => {
+            const container = task.status === 'archived' ? archivedContainer : activeContainer;
+            const item = document.createElement('div');
+            item.className = 'task-item';
+            item.innerHTML = `
+                <div class="task-header">
+                    <span class="task-id">${task.id}</span>
+                    <span class="task-status">${task.status}</span>
+                </div>
+                <div class="task-description">${task.description}</div>
+                ${task.status !== 'archived' ? `
+                    <button class="btn btn-secondary btn-sm" onclick="archiveTask('${task.id}')">
+                        Archive
+                    </button>
+                ` : ''}
+            `;
+            container.appendChild(item);
+        });
+    } catch (error) {
+        showNotification('Error loading tasks: ' + error.message, 'error');
+    }
+}
+
 // UI Functions
 function showTab(tabName) {
     document.querySelectorAll('.content').forEach(content => {
@@ -63,370 +324,109 @@ function showTab(tabName) {
         duration: 300,
         easing: 'cubic-bezier(0.4, 0, 0.2, 1)'
     });
+
+    // Load data based on tab
+    switch(tabName) {
+        case 'integrations':
+            loadIntegrationStatus();
+            break;
+        case 'tasks':
+            loadTasks();
+            break;
+    }
 }
 
+// Notification System
+function showNotification(message, type = 'info') {
+    const notification = document.getElementById('notification');
+    const messageElement = document.getElementById('notificationMessage');
+    
+    notification.className = `notification ${type}`;
+    messageElement.textContent = message;
+    notification.style.display = 'flex';
+    
+    notification.animate(animations.fadeIn, {
+        duration: 300,
+        easing: 'cubic-bezier(0.4, 0, 0.2, 1)'
+    });
+
+    setTimeout(() => closeNotification(), 5000);
+}
+
+function closeNotification() {
+    const notification = document.getElementById('notification');
+    notification.animate(animations.fadeOut, {
+        duration: 300,
+        easing: 'cubic-bezier(0.4, 0, 0.2, 1)'
+    }).onfinish = () => {
+        notification.style.display = 'none';
+    };
+}
+
+// Window Controls
+function minimizeWindow() {
+    window.electronAPI.minimizeWindow();
+}
+
+function closeWindow() {
+    window.electronAPI.closeWindow();
+}
+
+// Event Listeners
+document.addEventListener('DOMContentLoaded', async () => {
+    // Load current project if any
+    currentProject = await window.electronAPI.getCurrentProject();
+    updateProjectDisplay();
+    
+    // Initialize UI
+    loadTasks();
+    updateCostDisplay();
+    
+    // Set up event listeners
+    window.electronAPI.onCostUpdate((event, cost) => {
+        currentCost = cost;
+        updateCostDisplay();
+    });
+
+    window.electronAPI.onCostLimitReached(() => {
+        showNotification('Cost limit reached!', 'warning');
+    });
+
+    window.electronAPI.onTaskUpdate((event, data) => {
+        activeTasks.set(data.id, data);
+        loadTasks();
+    });
+});
+
+// Cost Management
 function updateCostDisplay() {
+    const costDisplay = document.getElementById('currentCost');
+    const costLimitDisplay = document.getElementById('costLimitDisplay');
+    const costProgress = document.getElementById('costProgress');
+    
     const percentage = (currentCost / costLimit) * 100;
     costDisplay.textContent = currentCost.toFixed(2);
     costLimitDisplay.textContent = costLimit.toFixed(2);
     
     costProgress.style.width = `${percentage}%`;
     costProgress.style.backgroundColor = colors.getProgressColor(percentage);
+}
+
+async function setCostLimit() {
+    const input = document.getElementById('costLimit');
+    const limit = parseFloat(input.value);
     
-    if (percentage >= 90) {
-        costDisplay.parentElement.animate(animations.shake, {
-            duration: 500,
-            iterations: 1
-        });
-    }
-}
-
-function addCommandItem(command, type = 'pending') {
-    const list = document.getElementById(`${type}Commands`);
-    const item = document.createElement('div');
-    item.className = 'command-item';
-    
-    const timestamp = new Date().toLocaleTimeString();
-    
-    item.innerHTML = `
-        <div class="command-info">
-            <div class="command-text">${command}</div>
-            <div class="command-meta">${timestamp}</div>
-        </div>
-        ${type === 'pending' ? `
-            <div class="command-actions">
-                <button class="btn btn-success" onclick="executeCommand('${command}')">Run</button>
-                <button class="btn btn-primary" onclick="saveCommand('${command}')">Save</button>
-                <button class="btn btn-secondary" onclick="skipCommand('${command}')">Skip</button>
-            </div>
-        ` : ''}
-    `;
-    
-    list.insertBefore(item, list.firstChild);
-    item.animate(animations.fadeIn, {
-        duration: 300,
-        easing: 'cubic-bezier(0.4, 0, 0.2, 1)'
-    });
-}
-
-// Command Management
-async function executeCommand(command) {
-    const cost = 0.01; // Cost per command
-    currentCost += cost;
-    updateCostDisplay();
-    
-    await ipcRenderer.invoke('executeCommand', command);
-    moveCommandToRecent(command, 'Executed');
-}
-
-function saveCommand(command) {
-    ipcRenderer.invoke('saveCommand', command);
-    moveCommandToRecent(command, 'Saved');
-}
-
-function skipCommand(command) {
-    moveCommandToRecent(command, 'Skipped');
-}
-
-function moveCommandToRecent(command, action) {
-    const pendingItem = document.querySelector(`.command-item:has(.command-text:contains("${command}"))`);
-    if (pendingItem) {
-        pendingItem.animate(animations.fadeOut, {
-            duration: 300,
-            easing: 'cubic-bezier(0.4, 0, 0.2, 1)'
-        }).onfinish = () => {
-            pendingItem.remove();
-            addCommandItem(`${command} (${action})`, 'recent');
-        };
-    }
-}
-
-// Credential Management
-function addCredential() {
-    const form = document.getElementById('credentialForm');
-    form.style.display = 'block';
-    form.animate(animations.fadeIn, {
-        duration: 300,
-        easing: 'cubic-bezier(0.4, 0, 0.2, 1)'
-    });
-}
-
-async function saveCredential() {
-    const service = document.getElementById('serviceType').value;
-    const fields = document.getElementById('credentialFields').children;
-    const credentials = {};
-    
-    Array.from(fields).forEach(field => {
-        credentials[field.name] = field.value;
-    });
-    
-    const success = await ipcRenderer.invoke('storeCredential', { service, credentials });
-    if (success) {
-        document.getElementById('credentialForm').style.display = 'none';
-        loadCredentials();
-    }
-}
-
-// Event Listeners
-document.addEventListener('DOMContentLoaded', () => {
-    loadCredentials();
-    updateCostDisplay();
-    
-    autoRunToggle.addEventListener('change', (e) => {
-        ipcRenderer.send('setAutoRun', e.target.checked);
-    });
-    
-    autoSaveToggle.addEventListener('change', (e) => {
-        ipcRenderer.send('setAutoSave', e.target.checked);
-    });
-});
-
-// Window Controls
-function minimizeWindow() {
-    ipcRenderer.send('minimize-window');
-}
-
-function closeWindow() {
-    ipcRenderer.send('close-window');
-}
-
-// IPC Handlers
-ipcRenderer.on('commandDetected', (event, data) => {
-    addCommandItem(data.command);
-});
-
-ipcRenderer.on('costUpdate', (event, cost) => {
-    currentCost = cost;
-    updateCostDisplay();
-});
-
-ipcRenderer.on('costLimitReached', () => {
-    autoRunToggle.checked = false;
-    document.body.animate(animations.shake, {
-        duration: 500,
-        iterations: 1
-    });
-});
-
-// Command History Visualization
-const commandHistory = new CommandHistory();
-
-function visualizeHistory() {
-    const historyContainer = document.getElementById('commandHistory');
-    const history = commandHistory.getHistory();
-    
-    historyContainer.innerHTML = '';
-    
-    history.forEach(entry => {
-        const item = document.createElement('div');
-        item.className = 'history-item';
-        if (entry.isCurrent) item.classList.add('current');
-        
-        const indent = '├─ '.repeat(entry.level);
-        const branches = entry.branches.length ? 
-            `[${entry.branches.join(', ')}]` : '';
-        
-        item.innerHTML = `
-            <div class="history-content" style="margin-left: ${entry.level * 20}px">
-                <div class="history-command">
-                    <span class="history-prefix">${indent}</span>
-                    <span class="command-text">${entry.command}</span>
-                    <span class="branch-tags">${branches}</span>
-                </div>
-                <div class="history-meta">
-                    <span class="timestamp">${new Date(entry.timestamp).toLocaleTimeString()}</span>
-                    <span class="status ${entry.status}">${entry.status}</span>
-                </div>
-                <div class="history-actions">
-                    <button onclick="revertTo('${entry.timestamp}')" 
-                            class="btn btn-warning btn-sm">Revert</button>
-                    <button onclick="branchFrom('${entry.timestamp}')" 
-                            class="btn btn-primary btn-sm">Branch</button>
-                </div>
-            </div>
-        `;
-        
-        historyContainer.appendChild(item);
-    });
-}
-
-function revertTo(timestamp) {
-    const steps = getStepsToTimestamp(timestamp);
-    if (steps > 0) {
-        const node = commandHistory.revert(steps);
-        visualizeHistory();
-        
-        // Show revert notification
-        showNotification(`Reverted ${steps} steps to: ${node.command}`);
-    }
-}
-
-function branchFrom(timestamp) {
-    const branchName = prompt('Enter branch name:');
-    if (branchName) {
-        const steps = getStepsToTimestamp(timestamp);
-        if (steps > 0) {
-            commandHistory.revert(steps);
-            commandHistory.branch(branchName);
-            visualizeHistory();
-            
-            showNotification(`Created branch '${branchName}'`);
-        }
-    }
-}
-
-function getStepsToTimestamp(timestamp) {
-    let steps = 0;
-    let current = commandHistory.current;
-    
-    while (current && current.timestamp !== parseInt(timestamp)) {
-        steps++;
-        current = current.parent;
+    if (isNaN(limit) || limit <= 0) {
+        showNotification('Please enter a valid cost limit', 'error');
+        return;
     }
     
-    return steps;
-}
-
-function showNotification(message) {
-    const notification = document.createElement('div');
-    notification.className = 'notification';
-    notification.textContent = message;
-    
-    document.body.appendChild(notification);
-    
-    notification.animate(animations.fadeIn, {
-        duration: 300,
-        easing: 'cubic-bezier(0.4, 0, 0.2, 1)'
-    });
-    
-    setTimeout(() => {
-        notification.animate(animations.fadeOut, {
-            duration: 300,
-            easing: 'cubic-bezier(0.4, 0, 0.2, 1)'
-        }).onfinish = () => notification.remove();
-    }, 3000);
-}
-
-// Add history styles
-const style = document.createElement('style');
-style.textContent = `
-.history-item {
-    margin: 10px 0;
-    padding: 10px;
-    background: var(--secondary);
-    border-radius: 6px;
-    transition: all 0.3s ease;
-}
-
-.history-item.current {
-    background: var(--accent);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-}
-
-.history-content {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-}
-
-.history-command {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-family: 'SF Mono', monospace;
-}
-
-.history-prefix {
-    color: var(--text);
-    opacity: 0.7;
-}
-
-.branch-tags {
-    color: var(--accent);
-    font-size: 0.9em;
-}
-
-.history-meta {
-    display: flex;
-    gap: 10px;
-    font-size: 0.9em;
-    color: var(--text);
-    opacity: 0.8;
-}
-
-.status {
-    padding: 2px 6px;
-    border-radius: 4px;
-    font-size: 0.8em;
-}
-
-.status.success { background: var(--success); }
-.status.error { background: var(--danger); }
-.status.reverted { background: var(--warning); }
-
-.history-actions {
-    display: flex;
-    gap: 8px;
-    margin-top: 5px;
-}
-
-.btn-sm {
-    padding: 4px 8px;
-    font-size: 0.9em;
-}
-
-.notification {
-    position: fixed;
-    bottom: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: var(--accent);
-    color: white;
-    padding: 10px 20px;
-    border-radius: 20px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-    z-index: 1000;
-}
-`;
-
-document.head.appendChild(style);
-
-// Initialize history visualization
-document.addEventListener('DOMContentLoaded', () => {
-    const historyTab = document.createElement('button');
-    historyTab.className = 'tab';
-    historyTab.textContent = 'History';
-    historyTab.onclick = () => showTab('history');
-    document.querySelector('.tab-container').appendChild(historyTab);
-    
-    const historyContent = document.createElement('div');
-    historyContent.id = 'history';
-    historyContent.className = 'content';
-    historyContent.innerHTML = `
-        <div class="history-controls">
-            <button class="btn btn-primary" onclick="commandHistory.branch('checkpoint')">
-                Create Checkpoint
-            </button>
-            <select id="branchSelect" onchange="switchBranch(this.value)">
-                <option value="">Switch Branch...</option>
-            </select>
-        </div>
-        <div id="commandHistory"></div>
-    `;
-    document.querySelector('.container').appendChild(historyContent);
-    
-    visualizeHistory();
-});
-
-// Update command execution to include history
-const originalExecuteCommand = executeCommand;
-executeCommand = async function(command) {
-    const node = commandHistory.execute(command);
     try {
-        await originalExecuteCommand(command);
-        node.setResult({ success: true });
+        await window.electronAPI.setCostLimit(limit);
+        costLimit = limit;
+        updateCostDisplay();
+        showNotification('Cost limit updated successfully', 'success');
     } catch (error) {
-        node.setResult({ success: false, error });
+        showNotification('Error updating cost limit: ' + error.message, 'error');
     }
-    visualizeHistory();
-};
+}
