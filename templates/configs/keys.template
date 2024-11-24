@@ -1,0 +1,20 @@
+# Example Keys Configuration Template
+# Replace placeholders with actual values
+
+[Confluence]
+API_TOKEN=<TOKEN>
+LOGIN=<EMAIL>
+
+[Cloud Provider]
+API_TOKEN=<TOKEN>
+REGION=<REGION>
+
+[Storage]
+ACCESS_KEY=<KEY>
+SECRET_KEY=<SECRET>
+ENDPOINT=<ENDPOINT>
+
+[Authentication]
+LOGIN=<EMAIL>
+PASSWORD=<PASSWORD>
+MFA_TYPE=<TYPE>

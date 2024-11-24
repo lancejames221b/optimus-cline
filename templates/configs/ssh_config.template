@@ -1,0 +1,13 @@
+# Example SSH Config Template
+# Replace placeholders with actual values
+
+Host staging-server
+    HostName <HOSTNAME>
+    User <USERNAME>
+    IdentityFile ~/.ewitness/access/ssh/keys/<KEYFILE>
+    StrictHostKeyChecking no
+
+Host *.internal
+    User <USERNAME>
+    ProxyJump staging-server
+    StrictHostKeyChecking no
