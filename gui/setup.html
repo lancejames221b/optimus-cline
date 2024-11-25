@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Cline Setup</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .setup-container {
+            padding: 40px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .setup-step {
+            margin-bottom: 30px;
+        }
+
+        .setup-step h2 {
+            color: var(--accent);
+            margin-bottom: 15px;
+        }
+
+        .setup-step p {
+            color: var(--text-secondary);
+            margin-bottom: 15px;
+            line-height: 1.5;
+        }
+
+        .file-path {
+            background: var(--background-light);
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-family: monospace;
+            margin: 10px 0;
+        }
+
+        .setup-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .template-content {
+            background: var(--background-light);
+            padding: 15px;
+            border-radius: 4px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            margin: 15px 0;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="setup-container">
+        <div class="setup-step">
+            <h2>Welcome to Cline!</h2>
+            <p>Let's get you set up with everything you need to start managing your tasks and credentials.</p>
+        </div>
+
+        <div class="setup-step">
+            <h2>Keys Configuration</h2>
+            <p>Cline needs a keys.txt file to manage your credentials securely. We've created a template at:</p>
+            <div class="file-path" id="defaultKeysPath"></div>
+            
+            <p>You can either:</p>
+            <div class="setup-actions">
+                <button class="btn btn-primary" onclick="useDefaultPath()">Use Default Location</button>
+                <button class="btn btn-secondary" onclick="selectCustomPath()">Choose Custom Location</button>
+            </div>
+        </div>
+
+        <div class="setup-step">
+            <h2>Template Format</h2>
+            <p>Your keys.txt should follow this format:</p>
+            <div class="template-content" id="templateContent">
+                Loading template...
+            </div>
+        </div>
+
+        <div class="setup-actions">
+            <button class="btn btn-primary" onclick="completeSetup()">Complete Setup</button>
+        </div>
+    </div>
+
+    <script>
+        let selectedKeysPath = '';
+
+        async function useDefaultPath() {
+            selectedKeysPath = document.getElementById('defaultKeysPath').textContent;
+            await completeSetup();
+        }
+
+        async function selectCustomPath() {
+            try {
+                const filePath = await window.electronAPI.selectKeysFile();
+                if (filePath) {
+                    selectedKeysPath = filePath;
+                    await completeSetup();
+                }
+            } catch (error) {
+                alert('Error selecting keys file: ' + error.message);
+            }
+        }
+
+        async function completeSetup() {
+            if (!selectedKeysPath) {
+                alert('Please select a keys file location');
+                return;
+            }
+
+            window.electronAPI.completeSetup({
+                keysPath: selectedKeysPath
+            });
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', async () => {
+            const defaultPath = await window.electronAPI.getDefaultKeysPath();
+            document.getElementById('defaultKeysPath').textContent = defaultPath;
+            selectedKeysPath = defaultPath;
+
+            const template = await window.electronAPI.getKeysTemplate();
+            document.getElementById('templateContent').textContent = template;
+        });
+    </script>
+</body>
+</html>

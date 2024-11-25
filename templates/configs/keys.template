@@ -1,20 +1,60 @@
-# Example Keys Configuration Template
-# Replace placeholders with actual values
+# Cline Access Configuration Template
+# This file defines credentials and access configurations for various services
+# Each section is marked with [ServiceName] and contains key=value pairs
 
+# Atlassian/Confluence Configuration
 [Confluence]
-API_TOKEN=<TOKEN>
-LOGIN=<EMAIL>
+# Your Atlassian login email
+LOGIN=your.email@example.com
+# API Token from https://id.atlassian.com/manage-profile/security/api-tokens
+API_TOKEN=your-api-token-here
+# Optional: Custom domain if not using .atlassian.net
+DOMAIN=your-domain.atlassian.net
 
-[Cloud Provider]
-API_TOKEN=<TOKEN>
-REGION=<REGION>
+# Digital Ocean Configuration
+[DigitalOcean]
+# API Token from https://cloud.digitalocean.com/account/api/tokens
+DO_TOKEN=your-do-token-here
+# Default region for operations
+REGION=nyc3
 
-[Storage]
-ACCESS_KEY=<KEY>
-SECRET_KEY=<SECRET>
-ENDPOINT=<ENDPOINT>
+# Digital Ocean Spaces (S3-compatible storage)
+[DigitalOcean Spaces]
+# Access credentials from https://cloud.digitalocean.com/account/api/spaces
+ACCESS_KEY=your-spaces-access-key
+SECRET_KEY=your-spaces-secret-key
+# Endpoint for your chosen region
+ENDPOINT=nyc3.digitaloceanspaces.com
 
-[Authentication]
-LOGIN=<EMAIL>
-PASSWORD=<PASSWORD>
-MFA_TYPE=<TYPE>
+# Google Account Configuration
+[Google]
+# Google account credentials
+LOGIN=your.email@gmail.com
+PASSWORD=your-app-specific-password
+# MFA type: phone_prompt, authenticator, or backup_codes
+MFA_TYPE=phone_prompt
+
+# Example Usage:
+
+## Confluence API
+```bash
+curl -u email@example.com:$API_TOKEN \
+  "https://your-domain.atlassian.net/wiki/rest/api/space/PROJECT/content"
+```
+
+## Digital Ocean API
+```bash
+curl -X GET \
+  -H "Authorization: Bearer $DO_TOKEN" \
+  "https://api.digitalocean.com/v2/droplets"
+```
+
+## Digital Ocean Spaces
+```bash
+# Configure s3cmd (~/.s3cfg)
+[default]
+access_key = your-spaces-access-key
+secret_key = your-spaces-secret-key
+host_base = nyc3.digitaloceanspaces.com
+host_bucket = %(bucket)s.nyc3.digitaloceanspaces.com
+use_https = True

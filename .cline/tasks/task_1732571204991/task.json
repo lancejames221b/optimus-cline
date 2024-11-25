@@ -1,0 +1,15 @@
+{
+  "id": "task_1732571204991",
+  "title": "testing",
+  "rules": [
+    "Don't delete production systems",
+    "Always backup before making changes",
+    "Verify changes in staging first",
+    "Follow security protocols",
+    "Document all changes",
+    "Always commit to git after major changes"
+  ],
+  "systemPrompt": "test optimus cline.",
+  "status": "active",
+  "created": "2024-11-25T21:46:44.992Z"
+}

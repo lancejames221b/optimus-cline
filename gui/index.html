@@ -110,21 +110,49 @@
 
         <div id="credentials" class="content">
             <div class="quick-import">
-                <h3>Quick Import</h3>
+                <h3>Credentials Management</h3>
                 <div class="import-actions">
-                    <button class="btn btn-primary" onclick="importFromKeys()">
-                        Import from keys.txt
+                    <button class="btn btn-primary" onclick="selectKeysFile()">
+                        Select keys.txt
                     </button>
-                    <button class="btn btn-primary" onclick="importFromVSCode()">
-                        Import from VS Code
+                    <button class="btn btn-primary" onclick="showNewCredentialDialog()">
+                        Add Credential
                     </button>
                 </div>
             </div>
 
             <div class="integration-section">
-                <h3>Imported Credentials</h3>
+                <h3>Stored Credentials</h3>
                 <div id="credentialsList" class="credential-list">
                     <!-- Credentials will be listed here -->
+                </div>
+            </div>
+
+            <!-- New Credential Dialog -->
+            <div id="newCredentialDialog" class="dialog">
+                <div class="dialog-content">
+                    <h3>Add New Credential</h3>
+                    <div class="form-group">
+                        <label>Service Name</label>
+                        <input type="text" id="credentialService" class="form-control" 
+                            placeholder="Enter service name (e.g., GitHub, AWS, etc.)">
+                    </div>
+
+                    <div id="credentialFields" class="credential-fields">
+                        <div class="credential-field-list">
+                            <!-- Dynamic credential fields will be listed here -->
+                        </div>
+                        <div class="field-input">
+                            <input type="text" id="newFieldName" class="form-control" placeholder="Field name (e.g., API_KEY)">
+                            <input type="text" id="newFieldValue" class="form-control" placeholder="Field value">
+                            <button class="btn btn-secondary" onclick="addCredentialField()">Add Field</button>
+                        </div>
+                    </div>
+
+                    <div class="dialog-actions">
+                        <button class="btn btn-primary" onclick="saveCredential()">Save</button>
+                        <button class="btn btn-secondary" onclick="closeNewCredentialDialog()">Cancel</button>
+                    </div>
                 </div>
             </div>
         </div>
