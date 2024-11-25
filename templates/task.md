@@ -1,6 +1,20 @@
 # Task: {TITLE}
 Date: $(date +%Y-%m-%d_%H-%M-%S)
 
+## Required Credentials
+- Service: [Service name, e.g., GitHub, AWS]
+- Keys: [Required keys, e.g., API_TOKEN, ACCESS_KEY]
+
+## Security Checks
+- [ ] Production safeguards active
+- [ ] Backup systems verified
+- [ ] Staging environment tested
+- [ ] Access controls verified
+- [ ] Cost limits configured
+- [ ] Monitoring systems active
+- [ ] Rollback plan tested
+- [ ] Documentation updated
+
 ## Task Rules
 - [ ] Don't delete production systems
 - [ ] Always backup before making changes
@@ -26,13 +40,6 @@ Date: $(date +%Y-%m-%d_%H-%M-%S)
 - SSH Config: [Required SSH configurations]
 - API Keys: [Required API credentials]
 - Permissions: [Required access levels]
-
-## Safety Checks
-- [ ] Production safeguards active
-- [ ] Backup systems verified
-- [ ] Rollback plan tested
-- [ ] Access controls verified
-- [ ] Monitoring systems active
 
 ## Pre-Execution Checklist
 - [ ] Verified environment
