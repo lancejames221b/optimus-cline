@@ -9,6 +9,9 @@ class CommandHistory(ttk.LabelFrame):
         super().__init__(parent, text="Command History")
         self.credential_manager = credential_manager
         
+        # State
+        self.current_project = None
+        
         # Command history
         history_frame = ttk.Frame(self)
         history_frame.pack(fill='x', pady=5)
@@ -39,14 +42,27 @@ class CommandHistory(ttk.LabelFrame):
         self.output_text = scrolledtext.ScrolledText(output_frame, wrap=tk.WORD)
         self.output_text.pack(fill='both', expand=True, padx=5, pady=5)
     
+    def set_project(self, project):
+        """Set current project"""
+        self.current_project = project
+        self.load_history()
+    
     def execute_command(self):
+        if not self.current_project:
+            messagebox.showwarning("Warning", "Please select a project first")
+            return
+        
         cmd = self.cmd_entry.get().strip()
         if not cmd:
             return
         
         # Inject credentials if needed
         if self.credential_manager:
-            task_path = os.path.join('.cline', 'current_task.md')
+            task_path = os.path.join(
+                self.current_project['path'],
+                '.cline',
+                'current_task.md'
+            )
             if os.path.exists(task_path):
                 cmd = self.credential_manager.inject_credentials(cmd, task_path)
         
@@ -68,8 +84,15 @@ class CommandHistory(ttk.LabelFrame):
             )
         )
         
+        if not self.current_project:
+            return
+        
         # Save to history file
-        history_file = os.path.join('.cline', 'command_history.json')
+        history_file = os.path.join(
+            self.current_project['path'],
+            '.cline',
+            'command_history.json'
+        )
         try:
             if os.path.exists(history_file):
                 with open(history_file) as f:
@@ -90,12 +113,20 @@ class CommandHistory(ttk.LabelFrame):
             print(f"Error saving command history: {e}")
     
     def load_history(self):
+        """Load command history for current project"""
         # Clear current history
         for item in self.cmd_tree.get_children():
             self.cmd_tree.delete(item)
         
+        if not self.current_project:
+            return
+        
         # Load history from file
-        history_file = os.path.join('.cline', 'command_history.json')
+        history_file = os.path.join(
+            self.current_project['path'],
+            '.cline',
+            'command_history.json'
+        )
         if os.path.exists(history_file):
             try:
                 with open(history_file) as f:

@@ -8,6 +8,9 @@ class TaskManagement(ttk.LabelFrame):
     def __init__(self, parent):
         super().__init__(parent, text="Task Management")
         
+        # State
+        self.current_project = None
+        
         # Create toolbar
         toolbar = ttk.Frame(self)
         toolbar.pack(fill='x', pady=5)
@@ -21,7 +24,16 @@ class TaskManagement(ttk.LabelFrame):
         self.tasks_tree.heading('Status', text='Status')
         self.tasks_tree.pack(expand=True, fill='both', pady=5)
     
+    def set_project(self, project):
+        """Set current project"""
+        self.current_project = project
+        self.refresh_tasks()
+    
     def new_task_dialog(self):
+        if not self.current_project:
+            messagebox.showwarning("Warning", "Please select a project first")
+            return
+        
         dialog = tk.Toplevel(self)
         dialog.title("New Task")
         dialog.geometry("500x600")
@@ -68,8 +80,8 @@ class TaskManagement(ttk.LabelFrame):
             
             timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
             task_id = f"task_{timestamp}_{desc.lower().replace(' ', '_')}"
-            task_dir = os.path.join('.cline', 'tasks', task_id)
-            os.makedirs(task_dir, exist_ok=True)
+            task_dir = os.path.join(self.current_project['path'], '.cline', 'tasks', task_id)
+            os.makedirs(task_dir)
             
             # Create task.json
             task_data = {
@@ -118,7 +130,13 @@ class TaskManagement(ttk.LabelFrame):
             return
         
         task_id = selected[0]
-        task_path = os.path.join('.cline', 'tasks', task_id, 'task.md')
+        task_path = os.path.join(
+            self.current_project['path'],
+            '.cline',
+            'tasks',
+            task_id,
+            'task.md'
+        )
         
         try:
             subprocess.run(['code', task_path])
@@ -135,7 +153,13 @@ class TaskManagement(ttk.LabelFrame):
             return
         
         task_id = selected[0]
-        task_path = os.path.join('.cline', 'tasks', task_id, 'task.json')
+        task_path = os.path.join(
+            self.current_project['path'],
+            '.cline',
+            'tasks',
+            task_id,
+            'task.json'
+        )
         
         with open(task_path) as f:
             task = json.load(f)
@@ -152,8 +176,11 @@ class TaskManagement(ttk.LabelFrame):
         for item in self.tasks_tree.get_children():
             self.tasks_tree.delete(item)
         
+        if not self.current_project:
+            return
+            
         # Load tasks
-        tasks_dir = os.path.join('.cline', 'tasks')
+        tasks_dir = os.path.join(self.current_project['path'], '.cline', 'tasks')
         if not os.path.exists(tasks_dir):
             return
             
