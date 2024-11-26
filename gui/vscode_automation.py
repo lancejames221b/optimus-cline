@@ -1,10 +1,11 @@
 import tkinter as tk
-from tkinter import ttk, messagebox, scrolledtext
+from tkinter import ttk, messagebox
 import subprocess
 import logging
 import pyautogui
 import time
 import os
+import json
 from datetime import datetime
 
 class VSCodeAutomation(ttk.LabelFrame):
@@ -14,6 +15,7 @@ class VSCodeAutomation(ttk.LabelFrame):
         
         # State
         self.current_project = None
+        self.button_location = None
         
         # VS Code commands
         self.VSCODE_COMMANDS = {
@@ -61,17 +63,39 @@ class VSCodeAutomation(ttk.LabelFrame):
         self.vscode_history.heading('Command', text='Command')
         self.vscode_history.heading('Status', text='Status')
         self.vscode_history.pack(fill='both', expand=True, pady=5)
-        
-        # Output area
-        output_frame = ttk.LabelFrame(self, text="Output")
-        output_frame.pack(fill='both', expand=True, padx=5, pady=5)
-        
-        self.vscode_output = scrolledtext.ScrolledText(output_frame, height=6)
-        self.vscode_output.pack(fill='both', expand=True, padx=5, pady=5)
     
     def set_project(self, project):
         """Set current project"""
         self.current_project = project
+        self.load_button_location()
+    
+    def load_button_location(self):
+        """Load saved button location for current project"""
+        if not self.current_project:
+            return
+            
+        config_path = os.path.join(self.current_project['path'], '.cline', 'vscode_config.json')
+        if os.path.exists(config_path):
+            try:
+                with open(config_path) as f:
+                    config = json.load(f)
+                    self.button_location = config.get('button_location')
+            except:
+                self.button_location = None
+    
+    def save_button_location(self):
+        """Save button location for current project"""
+        if not self.current_project or not self.button_location:
+            return
+            
+        config_dir = os.path.join(self.current_project['path'], '.cline')
+        os.makedirs(config_dir, exist_ok=True)
+        
+        config_path = os.path.join(config_dir, 'vscode_config.json')
+        config = {'button_location': self.button_location}
+        
+        with open(config_path, 'w') as f:
+            json.dump(config, f)
     
     def safe_execute_vscode(self, command):
         """Execute VS Code command with safety checks"""
@@ -115,25 +139,15 @@ class VSCodeAutomation(ttk.LabelFrame):
                 )
             )
             
-            # Show output
-            self.vscode_output.insert('end', f"\nCommand: {command}\n")
-            if result.stdout:
-                self.vscode_output.insert('end', result.stdout)
-            if result.stderr:
-                self.vscode_output.insert('end', f"Error: {result.stderr}\n")
-            self.vscode_output.see('end')
-            
             # Try to automate approval if needed
             if status == 'Success':
-                time.sleep(0.5)  # Wait for VS Code to show approval button
+                time.sleep(0.5)  # Wait for VS Code to show button
                 self.automate_vscode_approval()
             
         except Exception as e:
             error_msg = str(e)
             logging.error(f"VS Code command failed: {command} - {error_msg}")
             messagebox.showerror("Error", f"Failed to execute command: {error_msg}")
-            self.vscode_output.insert('end', f"Error: {error_msg}\n")
-            self.vscode_output.see('end')
     
     def execute_custom_vscode(self):
         """Execute custom VS Code command"""
@@ -151,22 +165,26 @@ class VSCodeAutomation(ttk.LabelFrame):
             if not self.security_checks.verify_checks():
                 return False
             
-            # Take screenshot of the screen
-            screen = pyautogui.screenshot()
+            if not self.button_location:
+                # First time - ask user to click button
+                if messagebox.askyesno(
+                    "VS Code Button",
+                    "Click OK, then click the VS Code button within 3 seconds.\n" +
+                    "This location will be saved for future automation."
+                ):
+                    time.sleep(3)
+                    # Capture click location
+                    self.button_location = pyautogui.position()
+                    self.save_button_location()
+                    logging.info(f"Saved button location: {self.button_location}")
+                    return True
+            else:
+                # Use saved location
+                x, y = self.button_location
+                pyautogui.click(x, y)
+                logging.info(f"Clicked saved location: {x}, {y}")
+                return True
             
-            # Look for red pixels that could be the button
-            width, height = screen.size
-            for x in range(0, width, 5):  # Step by 5 pixels for performance
-                for y in range(0, height, 5):
-                    pixel = screen.getpixel((x, y))
-                    # Check if pixel is reddish (high red, low green/blue)
-                    if pixel[0] > 200 and pixel[1] < 100 and pixel[2] < 100:
-                        # Found potential red button, click it
-                        pyautogui.click(x, y)
-                        logging.info(f"Clicked red button at {x}, {y}")
-                        return True
-            
-            logging.info("No red button found")
             return False
                 
         except Exception as e:
