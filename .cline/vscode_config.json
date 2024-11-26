@@ -1,1 +1,1 @@
-{"button_location": [138, 1028], "automation_enabled": false}
+{"button_location": [117, 1030], "automation_enabled": true, "button_colors": {"proceed": [255, 0, 0], "cancel": [128, 128, 128]}}

@@ -22,6 +22,7 @@ class VSCodeAutomation(ttk.LabelFrame):
         self.monitor_thread = None
         self.last_click_time = 0
         self.CLICK_COOLDOWN = 2.0  # Seconds between clicks
+        self.COLOR_TOLERANCE = 20  # Reduced tolerance for more precise matching
         
         # Button colors (RGB)
         self.button_colors = {
@@ -173,6 +174,9 @@ class VSCodeAutomation(ttk.LabelFrame):
             label = self.proceed_color_label if button_type == 'proceed' else self.cancel_color_label
             label.configure(background=color[1])
             self.save_settings()
+            
+            # Log color change
+            logging.info(f"Set {button_type} button color to RGB{(r,g,b)}")
     
     def capture_button_location(self):
         """Capture VS Code button location"""
@@ -199,7 +203,11 @@ class VSCodeAutomation(ttk.LabelFrame):
                     self.button_location = current_pos
                     self.save_button_location()
                     self.location_label.config(text=f"Set: {current_pos.x}, {current_pos.y}")
-                    logging.info(f"Captured button location: {current_pos.x}, {current_pos.y}")
+                    
+                    # Get initial pixel color
+                    screenshot = pyautogui.screenshot()
+                    color = screenshot.getpixel((current_pos.x, current_pos.y))
+                    logging.info(f"Captured button location: {current_pos.x}, {current_pos.y} with color RGB{color}")
                     return True
                 last_pos = current_pos
                 time.sleep(0.1)
@@ -223,11 +231,13 @@ class VSCodeAutomation(ttk.LabelFrame):
                 self.monitoring = True
                 self.monitor_thread = threading.Thread(target=self.monitor_buttons, daemon=True)
                 self.monitor_thread.start()
+                logging.info("Started button monitoring")
         else:
             self.monitoring = False
             if self.monitor_thread:
                 self.monitor_thread.join(timeout=1)
                 self.monitor_thread = None
+                logging.info("Stopped button monitoring")
     
     def monitor_buttons(self):
         """Monitor for button appearance"""
@@ -244,7 +254,7 @@ class VSCodeAutomation(ttk.LabelFrame):
                 
                 # Check if it's a proceed button (matches proceed color)
                 if self.colors_match(current_pixel, self.button_colors['proceed']):
-                    self.debug_label.config(text="Proceed button detected")
+                    self.debug_label.config(text=f"Proceed button detected: RGB{current_pixel}")
                     
                     # Check cooldown
                     current_time = time.time()
@@ -263,9 +273,9 @@ class VSCodeAutomation(ttk.LabelFrame):
                 
                 # Check if it's a cancel button
                 elif self.colors_match(current_pixel, self.button_colors['cancel']):
-                    self.debug_label.config(text="Cancel button detected - ignoring")
+                    self.debug_label.config(text=f"Cancel button detected: RGB{current_pixel}")
                 else:
-                    self.debug_label.config(text="No button detected")
+                    self.debug_label.config(text=f"No button detected: RGB{current_pixel}")
                 
                 time.sleep(0.1)  # Small delay between checks
                 
@@ -273,10 +283,10 @@ class VSCodeAutomation(ttk.LabelFrame):
                 logging.error(f"Error in button monitor: {e}")
                 time.sleep(1)  # Longer delay after error
     
-    def colors_match(self, color1, color2, tolerance=30):
+    def colors_match(self, color1, color2):
         """Check if colors match within tolerance"""
         return all(
-            abs(c1 - c2) <= tolerance
+            abs(c1 - c2) <= self.COLOR_TOLERANCE
             for c1, c2 in zip(color1, color2)
         )
     
@@ -320,7 +330,10 @@ class VSCodeAutomation(ttk.LabelFrame):
                         self.automation_enabled.set(config['automation_enabled'])
                         if config['automation_enabled']:
                             self.toggle_automation()  # Start monitoring if enabled
-            except:
+                            
+                    logging.info("Loaded VS Code automation settings")
+            except Exception as e:
+                logging.error(f"Error loading settings: {e}")
                 self.button_location = None
                 self.location_label.config(text="Not set")
                 self.automation_enabled.set(False)
@@ -354,6 +367,8 @@ class VSCodeAutomation(ttk.LabelFrame):
         
         with open(config_path, 'w') as f:
             json.dump(config, f)
+            
+        logging.info("Saved VS Code automation settings")
     
     def save_button_location(self):
         """Save button location (convenience method)"""
