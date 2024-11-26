@@ -1,32 +1,23 @@
-# Cline: AI-Powered Computer Use and Task Automation
+# Mac Assistant
 
-Cline is an intelligent computer use and task automation system that leverages multiple AI models to provide comprehensive automation capabilities. It combines Claude's computer use abilities with Perplexity's search capabilities for efficient and cost-effective task automation.
+An AI-powered assistant that learns and automates your daily Mac OS workflow. It uses screen analysis and computer control to perform tasks across applications, with intelligent search capabilities powered by Perplexity AI.
 
 ## Features
 
-- **AI-Powered Automation**
-  - Computer use automation with Claude Sonnet
-  - Intelligent search with Perplexity models
-  - Cost-optimized model selection
-  - Result caching and reuse
+- **Natural Language Interface**: Describe tasks in plain English
+- **Screen Analysis**: Understands what's on your screen
+- **Application Control**: Works with Chrome, VSCode, Slack, Gmail, etc.
+- **Intelligent Search**: Uses Perplexity AI for research and context
+- **Learning System**: Adapts to your workflow patterns
+- **Task History**: Tracks and learns from past operations
 
-- **Task Management**
-  - Task creation and tracking
-  - Command history
-  - Project organization
-  - Documentation generation
+## Requirements
 
-- **Security**
-  - API key management
-  - Permission system
-  - Usage monitoring
-  - Audit logging
-
-- **Cost Management**
-  - Budget controls
-  - Usage tracking
-  - Cost optimization
-  - Performance monitoring
+- macOS
+- Python 3.8+
+- Tesseract OCR (`brew install tesseract`)
+- API Keys:
+  - Perplexity API key (for intelligent search)
 
 ## Installation
 
@@ -48,55 +39,70 @@ pip install -r requirements.txt
 ```
 
 4. Configure API keys:
-Create a `keys.txt` file in your home directory with:
-```
+Create or edit `/Volumes/SeXternal/keys.txt`:
+```ini
+[AI Models]
 PERPLEXITY_API_KEY=your_key_here
-OPENROUTER_API_KEY=your_key_here
 ```
+
+5. Grant permissions:
+- System Settings > Privacy & Security > Accessibility
+- System Settings > Privacy & Security > Screen Recording
 
 ## Usage
 
-1. Run the application:
+1. Start the assistant:
 ```bash
-python run_gui.py
+python -m assistant
 ```
 
-2. Select or create a project:
-   - Use "Select Project" to open existing project
-   - Use "New Project" to create new project
-
-3. Use the available tabs:
-   - Tasks: Manage tasks and workflows
-   - Computer Use: Control computer automation
-   - AI Models: Configure AI settings
-   - Search: Perform intelligent searches
-   - Security: Manage permissions
-
-## Project Structure
-
+2. Example tasks:
 ```
-optimus-cline/
-├── gui/                    # GUI components
-│   ├── ai_models.py       # AI model integration
-│   ├── search_engine.py   # Search capabilities
-│   ├── computer_use.py    # Computer automation
-│   └── ...
-├── docs/                  # Documentation
-│   ├── PRD.md            # Product Requirements
-│   └── COMMANDS.md       # Available commands
-├── tasks/                 # Task management
-│   ├── active/           # Active tasks
-│   └── archive/          # Archived tasks
-├── templates/            # Project templates
-├── requirements.txt      # Dependencies
-└── run_gui.py           # Main entry point
+task> Open Chrome and search for Python automation
+task> Check my Gmail for new messages
+task> Create a new document in VSCode
 ```
+
+3. Available commands:
+- `/help`: Show help message
+- `/history`: Show task history
+- `/clear`: Clear task history
+- `/quit`: Exit assistant
+
+## Components
+
+- `search.py`: Intelligent search using Perplexity API
+- `computer.py`: Screen analysis and computer control
+- `agent.py`: Core assistant logic and task execution
+- `chat.py`: Terminal-based chat interface
+
+## Architecture
+
+1. **Task Analysis**:
+   - Natural language understanding
+   - Task decomposition
+   - Context gathering
+
+2. **Screen Understanding**:
+   - Real-time screen analysis
+   - UI element detection
+   - Text recognition (OCR)
+
+3. **Task Execution**:
+   - Application control
+   - Mouse/keyboard automation
+   - Error handling
+
+4. **Learning System**:
+   - Pattern recognition
+   - Workflow optimization
+   - Error correction
 
 ## Development
 
-1. Install development dependencies:
+1. Create new branch:
 ```bash
-pip install -r requirements.txt
+git checkout -b feature/your-feature
 ```
 
 2. Run tests:
@@ -113,6 +119,22 @@ black .
 ```bash
 flake8
 ```
+
+## Security
+
+- All operations are local
+- No data collection
+- Permission-based access
+- Secure API handling
+- Activity logging
+
+## Future Enhancements
+
+- Multi-monitor support
+- Custom workflow creation
+- Advanced pattern learning
+- Integration with more apps
+- Automated optimization
 
 ## Contributing
 

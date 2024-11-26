@@ -25,6 +25,8 @@ from .search_engine import (
     SearchManager
 )
 from .search_manager import SearchManagerGUI
+from .settings_manager import GlobalSettings, settings
+from .settings_gui import SettingsGUI
 from .utils import setup_logging, make_window_front, bind_window_events
 
 __all__ = [
@@ -54,6 +56,9 @@ __all__ = [
     'SearchResult',
     'SearchManager',
     'SearchManagerGUI',
+    'GlobalSettings',
+    'settings',
+    'SettingsGUI',
     'setup_logging',
     'make_window_front',
     'bind_window_events'

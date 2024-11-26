@@ -17,6 +17,10 @@ class SearchManagerGUI(ttk.Frame):
         self.search_manager = SearchManager()
         self.current_project = None
         
+        # Create event loop for async operations
+        self.loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(self.loop)
+        
         # Create main layout
         self._create_widgets()
     
@@ -144,7 +148,7 @@ class SearchManagerGUI(ttk.Frame):
         if not context:
             context = None
         
-        # Create and run async search
+        # Run async search in background
         async def do_search():
             try:
                 result = await self.search_manager.search(
@@ -180,7 +184,7 @@ class SearchManagerGUI(ttk.Frame):
                 messagebox.showerror("Error", f"Search failed: {e}")
         
         # Run async search
-        asyncio.run(do_search())
+        self.loop.run_until_complete(do_search())
     
     def _show_history_result(self, event):
         """Show selected history result"""

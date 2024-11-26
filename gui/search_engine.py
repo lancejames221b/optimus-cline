@@ -1,11 +1,12 @@
 import os
 import json
-import openai
 import logging
 from typing import List, Dict, Any, Optional
 from dataclasses import dataclass
 from enum import Enum
 from datetime import datetime
+import tiktoken
+from openai import OpenAI
 
 class SearchModel(Enum):
     """Available Perplexity models"""
@@ -27,17 +28,37 @@ class SearchEngine:
     """Intelligent search using Perplexity API"""
     
     def __init__(self, api_key: Optional[str] = None):
-        self.api_key = api_key or os.getenv('PERPLEXITY_API_KEY')
+        self.api_key = api_key
         if not self.api_key:
-            with open(os.path.expanduser('~/keys.txt')) as f:
-                for line in f:
-                    if line.startswith('PERPLEXITY_API_KEY='):
-                        self.api_key = line.split('=')[1].strip()
-                        break
+            # Try to load from environment
+            self.api_key = os.getenv('PERPLEXITY_API_KEY')
+            
+            if not self.api_key:
+                # Try to load from keys file
+                keys_locations = [
+                    '/Volumes/SeXternal/keys.txt',
+                    '/Volumes/SeXternal/221B/Code/eWitness/keys.txt',
+                    os.path.expanduser('~/keys.txt')
+                ]
+                
+                for keys_path in keys_locations:
+                    if os.path.exists(keys_path):
+                        with open(keys_path) as f:
+                            for line in f:
+                                if line.startswith('PERPLEXITY_API_KEY='):
+                                    self.api_key = line.split('=')[1].strip()
+                                    break
+                        if self.api_key:
+                            break
         
-        # Configure OpenAI client for Perplexity
-        openai.api_key = self.api_key
-        openai.api_base = 'https://api.perplexity.ai'
+        if not self.api_key:
+            raise ValueError("Perplexity API key not found")
+        
+        # Initialize OpenAI client for Perplexity
+        self.client = OpenAI(
+            api_key=self.api_key,
+            base_url="https://api.perplexity.ai"
+        )
         
         # Cache for search results
         self.cache_dir = os.path.expanduser('~/.cline/search_cache')
@@ -114,14 +135,14 @@ class SearchEngine:
         
         try:
             # Make API request
-            response = await openai.ChatCompletion.acreate(
+            response = await self.client.chat.completions.create(
                 model=model.value,
                 messages=messages
             )
             
             # Extract response
-            content = response['choices'][0]['message']['content']
-            tokens = response['usage']['total_tokens']
+            content = response.choices[0].message.content
+            tokens = response.usage.total_tokens
             cost = self._estimate_cost(tokens, model)
             
             # Create result

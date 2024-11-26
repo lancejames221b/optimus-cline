@@ -10,6 +10,7 @@ from .project_management import ProjectManagement
 from .computer_use_manager import ComputerUseManager
 from .ai_model_manager import AIModelManagerGUI
 from .search_manager import SearchManagerGUI
+from .settings_gui import SettingsGUI
 from .utils import setup_logging, make_window_front, bind_window_events
 
 class ClineApp:
@@ -37,6 +38,7 @@ class ClineApp:
         self.security_checks = SecurityChecks(notebook)
         
         # Create components
+        self.settings_gui = SettingsGUI(notebook)  # Settings first for global configuration
         self.credential_manager = CredentialManagement(notebook)
         self.task_management = TaskManagement(notebook, self.security_checks)
         self.command_history = CommandHistory(notebook, self.credential_manager)
@@ -46,6 +48,7 @@ class ClineApp:
         self.search_manager = SearchManagerGUI(notebook)
         
         # Add tabs
+        notebook.add(self.settings_gui, text='Settings')  # Settings first
         notebook.add(self.task_management, text='Tasks')
         notebook.add(self.credential_manager, text='Credentials')
         notebook.add(self.command_history, text='Commands')
@@ -83,6 +86,8 @@ class ClineApp:
             self.credential_manager.set_keys_file(
                 project['config']['settings']['keys_file']
             )
+            # Refresh settings display
+            self.settings_gui.refresh()
 
 def main():
     root = tk.Tk()
