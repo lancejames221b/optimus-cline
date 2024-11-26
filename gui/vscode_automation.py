@@ -9,7 +9,7 @@ import json
 import threading
 from datetime import datetime
 
-class VSCodeAutomation(ttk.LabelFrame):
+class VSCodeAutomation(ttk.Frame):  # Changed from LabelFrame to Frame
     # VS Code commands
     VSCODE_COMMANDS = {
         'accept_change': 'git.acceptChange',
@@ -18,8 +18,12 @@ class VSCodeAutomation(ttk.LabelFrame):
     }
     
     def __init__(self, parent, security_checks):
-        super().__init__(parent, text="VS Code Automation")
+        super().__init__(parent)  # Initialize as Frame
         self.security_checks = security_checks
+        
+        # Create outer LabelFrame for consistent styling
+        outer_frame = ttk.LabelFrame(self, text="VS Code Automation")
+        outer_frame.pack(fill='both', expand=True, padx=5, pady=5)
         
         # State
         self.current_project = None
@@ -32,7 +36,7 @@ class VSCodeAutomation(ttk.LabelFrame):
         self.COLOR_TOLERANCE = 20  # Color matching tolerance
         
         # Create main layout
-        main_frame = ttk.Frame(self)
+        main_frame = ttk.Frame(outer_frame)
         main_frame.pack(fill='both', expand=True)
         
         # Left side - Actions
