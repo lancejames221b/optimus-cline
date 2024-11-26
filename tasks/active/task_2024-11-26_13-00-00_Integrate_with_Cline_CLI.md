@@ -1,69 +1,103 @@
-# Integrate with Cline CLI
+# Integrate with Cline VSCode Extension
 
-## Objective
-Create integration with https://github.com/cline/cline to enable automated interaction with the Cline CLI tool, including message approval and command execution.
-
-## Requirements
-
-1. CLI Integration
-- [ ] Detect Cline CLI process
-- [ ] Monitor Cline output
-- [ ] Parse tool use requests
-- [ ] Automate tool approvals
-
-2. Message Handling
-- [ ] Parse tool messages
-- [ ] Analyze tool safety
-- [ ] Approve/reject decisions
-- [ ] Handle responses
-
-3. Context Management
-- [ ] Track conversation context
-- [ ] Monitor tool execution
-- [ ] Handle errors
-- [ ] Provide feedback
-
-## Implementation Plan
-
-1. Phase 1: Basic Integration
-- [ ] Create Cline process monitor
-- [ ] Implement message parser
-- [ ] Add basic approval logic
-- [ ] Test with simple tools
-
-2. Phase 2: Smart Automation
-- [ ] Add safety checks
-- [ ] Implement context tracking
-- [ ] Create decision engine
-- [ ] Add learning capabilities
-
-3. Phase 3: Advanced Features
-- [ ] Add pattern recognition
-- [ ] Implement workflow optimization
-- [ ] Create usage analytics
-- [ ] Add configuration options
-
-## Progress
+## Progress Update
 
 ### Completed
-- Core computer control working
-- Screen analysis functional
-- App automation tested
-- System operations verified
+1. Core Integration ✓
+- VSCode extension detection
+- Tool request handling
+- Safety analysis
+- History management
+
+2. Safety Features ✓
+- Block dangerous commands (rm, sudo)
+- Validate file paths (no ../ or /)
+- Safe defaults for unknown tools
+- History tracking for approvals
+
+3. Testing ✓
+- Extension detection tests
+- Tool request handling tests
+- History management tests
+- Safety analysis tests
 
 ### In Progress
-- Cline CLI integration design
-- Message parsing implementation
-- Safety check development
+1. VSCode Communication
+- [ ] Monitor extension output
+- [ ] Parse tool requests
+- [ ] Send approvals
+- [ ] Handle responses
+
+2. Tool Integration
+- [ ] Command execution
+- [ ] File operations
+- [ ] Browser control
+- [ ] System operations
 
 ### Next Steps
-1. Study Cline CLI behavior
-2. Design message monitoring
-3. Implement approval logic
-4. Create test suite
+1. Extension Monitoring
+- [ ] Watch extension process
+- [ ] Parse extension output
+- [ ] Handle tool requests
+- [ ] Send responses
+
+2. Tool Execution
+- [ ] Execute approved commands
+- [ ] Handle file operations
+- [ ] Control browser actions
+- [ ] Manage system tasks
+
+3. Error Handling
+- [ ] Extension errors
+- [ ] Tool execution errors
+- [ ] System errors
+- [ ] Recovery strategies
+
+## Implementation Details
+
+### Tool Request Format
+```xml
+<tool_name>
+<param1>value1</param1>
+<param2>value2</param2>
+</tool_name>
+```
+
+### Safety Rules
+1. Blocked Commands:
+- rm, sudo, mv
+- Pipe operators (|)
+- Redirections (>, >>)
+
+2. File Paths:
+- No parent directory (..)
+- No absolute paths (/)
+- Within project only
+
+3. Auto-Approval:
+- Safe commands only
+- Valid paths
+- Known patterns
+
+### Testing Strategy
+1. Unit Tests:
+- Extension detection
+- Tool request handling
+- Safety analysis
+- History management
+
+2. Integration Tests:
+- Extension communication
+- Tool execution
+- Error handling
+
+3. System Tests:
+- End-to-end workflows
+- Real tool usage
+- Performance testing
 
 ## Notes
-- Cline is already installed and in use
-- Need to maintain existing workflow
-- Focus on safety and reliability
-- Consider user feedback loop
+- Extension found at ~/.vscode/extensions/saoudrizwan.claude-dev-2.1.6.backup
+- Uses XML format for tool requests
+- Requires approval for each tool use
+- Maintains history of approvals

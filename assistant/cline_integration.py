@@ -20,7 +20,7 @@ class ToolUse:
 class ClineMonitor:
     """Monitors and interacts with Cline CLI"""
     
-    def __init__(self, check_path: bool = True):
+    def __init__(self, check_path: bool = True, custom_path: Optional[str] = None):
         self.logger = logging.getLogger(__name__)
         
         # Track Cline process
@@ -34,7 +34,12 @@ class ClineMonitor:
         os.makedirs(self.cache_dir, exist_ok=True)
         
         # Find Cline executable
-        self.cline_path = self._find_cline() if check_path else 'cline'
+        if custom_path:
+            self.cline_path = custom_path
+        elif check_path:
+            self.cline_path = self._find_cline()
+        else:
+            self.cline_path = 'cline'
         
         # Load history
         self._load_history()
@@ -45,7 +50,9 @@ class ClineMonitor:
         paths = [
             os.path.expanduser('~/.cargo/bin/cline'),  # Cargo install
             '/usr/local/bin/cline',  # Homebrew install
-            os.path.expanduser('~/bin/cline')  # Manual install
+            os.path.expanduser('~/bin/cline'),  # Manual install
+            os.path.expanduser('~/.local/bin/cline'),  # User install
+            '/opt/homebrew/bin/cline'  # M1 Mac Homebrew
         ]
         
         for path in paths:
@@ -64,7 +71,15 @@ class ClineMonitor:
         except Exception:
             pass
         
-        raise FileNotFoundError("Could not find Cline executable")
+        raise FileNotFoundError(
+            "Could not find Cline executable. Please ensure it's installed and in your PATH.\n"
+            "Common install locations:\n"
+            "- ~/.cargo/bin/cline\n"
+            "- /usr/local/bin/cline\n"
+            "- ~/bin/cline\n"
+            "- ~/.local/bin/cline\n"
+            "- /opt/homebrew/bin/cline"
+        )
     
     def _load_history(self):
         """Load tool use history from cache"""
