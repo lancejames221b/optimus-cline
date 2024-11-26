@@ -3,6 +3,8 @@ from tkinter import ttk, scrolledtext, messagebox
 import json
 import os
 import subprocess
+import pyautogui
+import pyperclip
 from datetime import datetime
 
 class TaskManagement(ttk.LabelFrame):
@@ -30,6 +32,7 @@ class TaskManagement(ttk.LabelFrame):
         ttk.Button(toolbar, text="Open", command=self.open_task).pack(side='left', padx=5)
         ttk.Button(toolbar, text="Archive", command=self.archive_task).pack(side='left', padx=5)
         ttk.Button(toolbar, text="Set Current", command=self.set_current_task).pack(side='left', padx=5)
+        ttk.Button(toolbar, text="Tell Cline", command=self.tell_cline).pack(side='left', padx=5)
         
         # Tasks list
         self.tasks_tree = ttk.Treeview(left_frame, columns=('Status',), show='tree headings')
@@ -49,6 +52,34 @@ class TaskManagement(ttk.LabelFrame):
         
         # Bind selection
         self.tasks_tree.bind('<<TreeviewSelect>>', self.on_task_select)
+    
+    def tell_cline(self):
+        """Tell Cline about the current task using PyAutoGUI"""
+        if not self.current_project:
+            messagebox.showwarning("Warning", "Please select a project first")
+            return
+            
+        selected = self.tasks_tree.selection()
+        if not selected:
+            messagebox.showwarning("Warning", "Please select a task")
+            return
+        
+        task_id = selected[0]
+        task_path = os.path.join(
+            self.current_project['path'],
+            '.cline',
+            'tasks',
+            task_id,
+            'task.md'
+        )
+        
+        try:
+            # Type task path into Cline chat
+            pyautogui.write(f"task {task_path}")
+            pyautogui.press('enter')
+            
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to tell Cline: {e}")
     
     def set_project(self, project):
         """Set current project"""
@@ -94,7 +125,10 @@ class TaskManagement(ttk.LabelFrame):
         with open(os.path.join(self.current_project['path'], '.cline', 'current_task.txt'), 'w') as f:
             f.write(task_id)
         
-        messagebox.showinfo("Success", f"Set current task to: {task_id}")
+        # Copy task path to clipboard
+        pyperclip.copy(task_path)
+        
+        messagebox.showinfo("Success", f"Set current task to: {task_id}\nTask path copied to clipboard")
     
     def on_task_select(self, event):
         """Handle task selection"""
