@@ -29,6 +29,7 @@ class TaskManagement(ttk.LabelFrame):
         ttk.Button(toolbar, text="Edit", command=self.edit_task).pack(side='left', padx=5)
         ttk.Button(toolbar, text="Open", command=self.open_task).pack(side='left', padx=5)
         ttk.Button(toolbar, text="Archive", command=self.archive_task).pack(side='left', padx=5)
+        ttk.Button(toolbar, text="Set Current", command=self.set_current_task).pack(side='left', padx=5)
         
         # Tasks list
         self.tasks_tree = ttk.Treeview(left_frame, columns=('Status',), show='tree headings')
@@ -53,6 +54,47 @@ class TaskManagement(ttk.LabelFrame):
         """Set current project"""
         self.current_project = project
         self.refresh_tasks()
+    
+    def set_current_task(self):
+        """Set the selected task as the current task"""
+        if not self.current_project:
+            messagebox.showwarning("Warning", "Please select a project first")
+            return
+            
+        selected = self.tasks_tree.selection()
+        if not selected:
+            messagebox.showwarning("Warning", "Please select a task")
+            return
+        
+        task_id = selected[0]
+        
+        # Create current_task.md symlink
+        current_task_path = os.path.join(
+            self.current_project['path'],
+            '.cline',
+            'current_task.md'
+        )
+        
+        task_path = os.path.join(
+            self.current_project['path'],
+            '.cline',
+            'tasks',
+            task_id,
+            'task.md'
+        )
+        
+        # Remove existing symlink if it exists
+        if os.path.exists(current_task_path):
+            os.remove(current_task_path)
+        
+        # Create symlink
+        os.symlink(task_path, current_task_path)
+        
+        # Also write task ID to current_task.txt for Cline CLI
+        with open(os.path.join(self.current_project['path'], '.cline', 'current_task.txt'), 'w') as f:
+            f.write(task_id)
+        
+        messagebox.showinfo("Success", f"Set current task to: {task_id}")
     
     def on_task_select(self, event):
         """Handle task selection"""
