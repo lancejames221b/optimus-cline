@@ -67,6 +67,16 @@ class TestDialog:
         )
         self.info_label.pack(pady=(0, 10))
         
+        # Create coordinates label
+        self.coord_label = tk.Label(
+            info_frame,
+            text="Mouse: (0, 0)",
+            fg='#666666',  # Dimmed text
+            bg='#1e1e1e',
+            font=('Arial', 10)
+        )
+        self.coord_label.pack(pady=(0, 10))
+        
         # Create test frame
         test_frame = tk.Frame(main_frame, bg='#1e1e1e')
         test_frame.pack(fill='x')
@@ -115,6 +125,10 @@ class TestDialog:
         self.update_thread = threading.Thread(target=self.process_updates, daemon=True)
         self.update_thread.start()
         
+        # Start coordinate thread
+        self.coord_thread = threading.Thread(target=self.update_coordinates, daemon=True)
+        self.coord_thread.start()
+        
         # Handle window close
         self.root.protocol("WM_DELETE_WINDOW", self.on_close)
     
@@ -123,20 +137,33 @@ class TestDialog:
         pos = pyautogui.position()
         color = pyautogui.screenshot().getpixel((pos.x, pos.y))
         self.save_color('proceed', color)
-        self.update_queue.put(('info', f"Proceed color captured: RGB{color}"))
+        self.update_queue.put(('info', f"Proceed color captured: RGB{color} at ({pos.x}, {pos.y})"))
     
     def capture_cancel_color(self):
         """Capture cancel button color"""
         pos = pyautogui.position()
         color = pyautogui.screenshot().getpixel((pos.x, pos.y))
         self.save_color('cancel', color)
-        self.update_queue.put(('info', f"Cancel color captured: RGB{color}"))
+        self.update_queue.put(('info', f"Cancel color captured: RGB{color} at ({pos.x}, {pos.y})"))
     
     def toggle_testing(self):
         """Toggle color detection testing"""
         self.testing = self.test_var.get()
         if not self.testing:
             self.update_queue.put(('test', ''))
+    
+    def update_coordinates(self):
+        """Update mouse coordinates display"""
+        last_pos = None
+        while self.running:
+            try:
+                pos = pyautogui.position()
+                if pos != last_pos:
+                    self.update_queue.put(('coord', f"Mouse: ({pos.x}, {pos.y})"))
+                    last_pos = pos
+            except:
+                pass
+            time.sleep(0.1)
     
     def test_color_detection(self):
         """Test color detection at current mouse position"""
@@ -201,6 +228,8 @@ class TestDialog:
                             self.test_label.config(text=message, fg='white')
                         else:
                             self.test_label.config(text=message, fg='red')
+                elif update_type == 'coord':
+                    self.coord_label.config(text=data)
             except:
                 pass
             time.sleep(0.05)
