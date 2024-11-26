@@ -4,6 +4,7 @@ import time
 import threading
 import json
 import os
+from queue import Queue
 
 class TestDialog:
     def __init__(self):
@@ -14,6 +15,7 @@ class TestDialog:
         # State
         self.running = True
         self.testing = False
+        self.update_queue = Queue()
         
         # Create main frame
         main_frame = tk.Frame(self.root, bg='#1e1e1e')
@@ -109,6 +111,10 @@ class TestDialog:
         self.test_thread = threading.Thread(target=self.test_color_detection, daemon=True)
         self.test_thread.start()
         
+        # Start update thread
+        self.update_thread = threading.Thread(target=self.process_updates, daemon=True)
+        self.update_thread.start()
+        
         # Handle window close
         self.root.protocol("WM_DELETE_WINDOW", self.on_close)
     
@@ -117,60 +123,87 @@ class TestDialog:
         pos = pyautogui.position()
         color = pyautogui.screenshot().getpixel((pos.x, pos.y))
         self.save_color('proceed', color)
-        self.info_label.config(text=f"Proceed color captured: RGB{color}")
+        self.update_queue.put(('info', f"Proceed color captured: RGB{color}"))
     
     def capture_cancel_color(self):
         """Capture cancel button color"""
         pos = pyautogui.position()
         color = pyautogui.screenshot().getpixel((pos.x, pos.y))
         self.save_color('cancel', color)
-        self.info_label.config(text=f"Cancel color captured: RGB{color}")
+        self.update_queue.put(('info', f"Cancel color captured: RGB{color}"))
     
     def toggle_testing(self):
         """Toggle color detection testing"""
         self.testing = self.test_var.get()
         if not self.testing:
-            self.test_label.config(text="")
+            self.update_queue.put(('test', ''))
     
     def test_color_detection(self):
         """Test color detection at current mouse position"""
+        last_check = 0
         while self.running:
             if self.testing:
-                try:
-                    pos = pyautogui.position()
-                    color = pyautogui.screenshot().getpixel((pos.x, pos.y))
-                    
-                    # Load saved colors
-                    config_path = os.path.join(os.getcwd(), '.cline', 'vscode_config.json')
-                    if os.path.exists(config_path):
-                        with open(config_path) as f:
-                            config = json.load(f)
-                            if 'button_colors' in config:
-                                proceed_color = tuple(config['button_colors']['proceed'])
-                                cancel_color = tuple(config['button_colors']['cancel'])
-                                
-                                # Check color matches
-                                if self.colors_match(color, proceed_color):
-                                    self.test_label.config(
-                                        text=f"Detected proceed button: RGB{color}",
-                                        fg='#0e7ad3'  # Blue for proceed
-                                    )
-                                elif self.colors_match(color, cancel_color):
-                                    self.test_label.config(
-                                        text=f"Detected cancel button: RGB{color}",
-                                        fg='#3c3c3c'  # Grey for cancel
-                                    )
-                                else:
-                                    self.test_label.config(
-                                        text=f"No button detected: RGB{color}",
-                                        fg='white'
-                                    )
+                current_time = time.time()
+                if current_time - last_check >= 0.2:  # Check every 200ms
+                    try:
+                        pos = pyautogui.position()
+                        color = pyautogui.screenshot().getpixel((pos.x, pos.y))
+                        
+                        # Load saved colors
+                        config_path = os.path.join(os.getcwd(), '.cline', 'vscode_config.json')
+                        if os.path.exists(config_path):
+                            with open(config_path) as f:
+                                config = json.load(f)
+                                if 'button_colors' in config:
+                                    proceed_color = tuple(config['button_colors']['proceed'])
+                                    cancel_color = tuple(config['button_colors']['cancel'])
+                                    
+                                    # Check color matches
+                                    if self.colors_match(color, proceed_color):
+                                        self.update_queue.put((
+                                            'test',
+                                            ('proceed', f"Detected proceed button: RGB{color}")
+                                        ))
+                                    elif self.colors_match(color, cancel_color):
+                                        self.update_queue.put((
+                                            'test',
+                                            ('cancel', f"Detected cancel button: RGB{color}")
+                                        ))
+                                    else:
+                                        self.update_queue.put((
+                                            'test',
+                                            ('none', f"No button detected: RGB{color}")
+                                        ))
+                        else:
+                            self.update_queue.put(('test', ('error', "No color config found")))
+                    except:
+                        pass
+                    last_check = current_time
+            time.sleep(0.05)
+    
+    def process_updates(self):
+        """Process UI updates from queue"""
+        while self.running:
+            try:
+                update_type, data = self.update_queue.get_nowait()
+                if update_type == 'info':
+                    self.info_label.config(text=data)
+                elif update_type == 'test':
+                    if not data:
+                        self.test_label.config(text="")
                     else:
-                        self.test_label.config(text="No color config found")
-                except:
-                    pass
-            
-            time.sleep(0.1)  # Small delay between checks
+                        button_type, message = data
+                        if button_type == 'proceed':
+                            self.test_label.config(text=message, fg='#0e7ad3')
+                        elif button_type == 'cancel':
+                            self.test_label.config(text=message, fg='#3c3c3c')
+                        elif button_type == 'none':
+                            self.test_label.config(text=message, fg='white')
+                        else:
+                            self.test_label.config(text=message, fg='red')
+            except:
+                pass
+            time.sleep(0.05)
     
     def colors_match(self, color1, color2, tolerance=20):
         """Check if colors match within tolerance"""
