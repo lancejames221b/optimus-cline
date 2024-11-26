@@ -7,6 +7,7 @@ from .task_management import TaskManagement
 from .credential_management import CredentialManagement
 from .command_history import CommandHistory
 from .project_management import ProjectManagement
+from .computer_use_manager import ComputerUseManager
 from .utils import setup_logging, make_window_front, bind_window_events
 
 class ClineApp:
@@ -38,12 +39,14 @@ class ClineApp:
         self.task_management = TaskManagement(notebook, self.security_checks)
         self.command_history = CommandHistory(notebook, self.credential_manager)
         self.vscode_automation = VSCodeAutomation(notebook, self.security_checks)
+        self.computer_use = ComputerUseManager(notebook)
         
         # Add tabs
         notebook.add(self.task_management, text='Tasks')
         notebook.add(self.credential_manager, text='Credentials')
         notebook.add(self.command_history, text='Commands')
         notebook.add(self.vscode_automation, text='VS Code')
+        notebook.add(self.computer_use, text='Computer Use')
         notebook.add(self.security_checks, text='Security')
         
         # Bind project events
@@ -62,6 +65,7 @@ class ClineApp:
             self.task_management.set_project(project)
             self.command_history.set_project(project)
             self.vscode_automation.set_project(project)
+            self.computer_use.set_project(project)
     
     def on_keys_changed(self, event):
         """Handle keys file change event"""
