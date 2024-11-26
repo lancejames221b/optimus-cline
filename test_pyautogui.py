@@ -11,9 +11,13 @@ class TestDialog:
         self.root.title("Test Dialog")
         self.root.configure(bg='#1e1e1e')  # VS Code dark theme background
         
+        # Create main frame
+        main_frame = tk.Frame(self.root, bg='#1e1e1e')
+        main_frame.pack(padx=20, pady=20)
+        
         # Create buttons frame
-        buttons_frame = tk.Frame(self.root, bg='#1e1e1e')
-        buttons_frame.pack(padx=20, pady=20)
+        buttons_frame = tk.Frame(main_frame, bg='#1e1e1e')
+        buttons_frame.pack(fill='x', pady=(0, 20))
         
         # Create proceed button (VS Code primary button)
         self.proceed_btn = tk.Button(
@@ -22,8 +26,9 @@ class TestDialog:
             bg='#0e7ad3',  # VS Code primary button blue
             fg='white',
             relief='flat',
-            padx=10,
-            pady=5,
+            font=('Arial', 14),
+            width=15,
+            height=2,
             command=self.capture_proceed_color
         )
         self.proceed_btn.pack(side='left', padx=10)
@@ -35,20 +40,52 @@ class TestDialog:
             bg='#3c3c3c',  # VS Code secondary button grey
             fg='white',
             relief='flat',
-            padx=10,
-            pady=5,
+            font=('Arial', 14),
+            width=15,
+            height=2,
             command=self.capture_cancel_color
         )
         self.cancel_btn.pack(side='left', padx=10)
         
+        # Create info frame
+        info_frame = tk.Frame(main_frame, bg='#1e1e1e')
+        info_frame.pack(fill='x')
+        
         # Create info label
         self.info_label = tk.Label(
-            self.root,
+            info_frame,
             text="Click a button to capture its color",
             fg='white',
-            bg='#1e1e1e'
+            bg='#1e1e1e',
+            font=('Arial', 12)
         )
-        self.info_label.pack(pady=10)
+        self.info_label.pack(pady=(0, 10))
+        
+        # Create test frame
+        test_frame = tk.Frame(main_frame, bg='#1e1e1e')
+        test_frame.pack(fill='x')
+        
+        # Create test button
+        self.test_btn = tk.Button(
+            test_frame,
+            text="Test Color Detection",
+            bg='#252526',  # VS Code button grey
+            fg='white',
+            relief='flat',
+            font=('Arial', 12),
+            command=self.test_color_detection
+        )
+        self.test_btn.pack(pady=10)
+        
+        # Create test result label
+        self.test_label = tk.Label(
+            test_frame,
+            text="",
+            fg='white',
+            bg='#1e1e1e',
+            font=('Arial', 12)
+        )
+        self.test_label.pack()
         
         # Center window
         self.root.update_idletasks()
@@ -79,6 +116,38 @@ class TestDialog:
         color = pyautogui.screenshot().getpixel((pos.x, pos.y))
         self.save_color('cancel', color)
         self.info_label.config(text=f"Cancel color captured: RGB{color}")
+    
+    def test_color_detection(self):
+        """Test color detection at current mouse position"""
+        pos = pyautogui.position()
+        color = pyautogui.screenshot().getpixel((pos.x, pos.y))
+        
+        # Load saved colors
+        config_path = os.path.join(os.getcwd(), '.cline', 'vscode_config.json')
+        if os.path.exists(config_path):
+            with open(config_path) as f:
+                config = json.load(f)
+                if 'button_colors' in config:
+                    proceed_color = tuple(config['button_colors']['proceed'])
+                    cancel_color = tuple(config['button_colors']['cancel'])
+                    
+                    # Check color matches
+                    if self.colors_match(color, proceed_color):
+                        self.test_label.config(text=f"Detected proceed button: RGB{color}")
+                    elif self.colors_match(color, cancel_color):
+                        self.test_label.config(text=f"Detected cancel button: RGB{color}")
+                    else:
+                        self.test_label.config(text=f"No button detected: RGB{color}")
+                    return
+        
+        self.test_label.config(text="No color config found")
+    
+    def colors_match(self, color1, color2, tolerance=20):
+        """Check if colors match within tolerance"""
+        return all(
+            abs(c1 - c2) <= tolerance
+            for c1, c2 in zip(color1, color2)
+        )
     
     def save_color(self, button_type, color):
         """Save button color to config"""
