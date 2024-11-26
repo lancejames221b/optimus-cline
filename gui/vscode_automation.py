@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import ttk, messagebox, colorchooser
 import subprocess
 import logging
 import pyautogui
@@ -8,8 +8,6 @@ import os
 import json
 import threading
 from datetime import datetime
-import pytesseract
-from PIL import Image
 
 class VSCodeAutomation(ttk.LabelFrame):
     def __init__(self, parent, security_checks):
@@ -22,9 +20,14 @@ class VSCodeAutomation(ttk.LabelFrame):
         self.automation_enabled = tk.BooleanVar(value=False)
         self.monitoring = False
         self.monitor_thread = None
-        self.last_pixel = None
         self.last_click_time = 0
         self.CLICK_COOLDOWN = 2.0  # Seconds between clicks
+        
+        # Button colors (RGB)
+        self.button_colors = {
+            'proceed': (255, 0, 0),  # Default red for proceed
+            'cancel': (128, 128, 128)  # Default grey for cancel
+        }
         
         # VS Code commands
         self.VSCODE_COMMANDS = {
@@ -84,6 +87,36 @@ class VSCodeAutomation(ttk.LabelFrame):
         self.location_label = ttk.Label(location_frame, text="Not set")
         self.location_label.pack(side='left', padx=5)
         
+        # Color setup
+        color_frame = ttk.Frame(setup_frame)
+        color_frame.pack(fill='x', padx=5, pady=2)
+        
+        # Proceed color
+        proceed_frame = ttk.Frame(color_frame)
+        proceed_frame.pack(fill='x', pady=2)
+        
+        ttk.Label(proceed_frame, text="Proceed Color:").pack(side='left')
+        self.proceed_color_label = ttk.Label(proceed_frame, width=10, background='#ff0000')
+        self.proceed_color_label.pack(side='left', padx=5)
+        ttk.Button(
+            proceed_frame,
+            text="Pick Color",
+            command=lambda: self.pick_color('proceed')
+        ).pack(side='left', padx=5)
+        
+        # Cancel color
+        cancel_frame = ttk.Frame(color_frame)
+        cancel_frame.pack(fill='x', pady=2)
+        
+        ttk.Label(cancel_frame, text="Cancel Color:").pack(side='left')
+        self.cancel_color_label = ttk.Label(cancel_frame, width=10, background='#808080')
+        self.cancel_color_label.pack(side='left', padx=5)
+        ttk.Button(
+            cancel_frame,
+            text="Pick Color",
+            command=lambda: self.pick_color('cancel')
+        ).pack(side='left', padx=5)
+        
         # Automation toggle
         toggle_frame = ttk.Frame(setup_frame)
         toggle_frame.pack(fill='x', padx=5, pady=2)
@@ -102,8 +135,9 @@ class VSCodeAutomation(ttk.LabelFrame):
         # Instructions
         instructions = ttk.Label(
             setup_frame,
-            text="Click 'Set Button Location' when any dialog button appears.\n" +
-                 "Enable Auto-Click to automatically click buttons when they appear.",
+            text="1. Click 'Set Button Location' when any dialog button appears\n" +
+                 "2. Set colors for Proceed and Cancel buttons\n" +
+                 "3. Enable Auto-Click to automatically click Proceed buttons",
             justify='left'
         )
         instructions.pack(fill='x', padx=5, pady=5)
@@ -125,6 +159,20 @@ class VSCodeAutomation(ttk.LabelFrame):
         self.vscode_history.heading('Command', text='Command')
         self.vscode_history.heading('Status', text='Status')
         self.vscode_history.pack(fill='both', expand=True, pady=5)
+    
+    def pick_color(self, button_type):
+        """Open color picker for button type"""
+        current_color = self.button_colors[button_type]
+        color = colorchooser.askcolor(
+            color=f'#{current_color[0]:02x}{current_color[1]:02x}{current_color[2]:02x}',
+            title=f"Pick {button_type.title()} Button Color"
+        )
+        if color[0]:  # Color selected
+            r, g, b = [int(x) for x in color[0]]
+            self.button_colors[button_type] = (r, g, b)
+            label = self.proceed_color_label if button_type == 'proceed' else self.cancel_color_label
+            label.configure(background=color[1])
+            self.save_settings()
     
     def capture_button_location(self):
         """Capture VS Code button location"""
@@ -151,11 +199,6 @@ class VSCodeAutomation(ttk.LabelFrame):
                     self.button_location = current_pos
                     self.save_button_location()
                     self.location_label.config(text=f"Set: {current_pos.x}, {current_pos.y}")
-                    
-                    # Get initial pixel color
-                    screenshot = pyautogui.screenshot()
-                    self.last_pixel = screenshot.getpixel((current_pos.x, current_pos.y))
-                    
                     logging.info(f"Captured button location: {current_pos.x}, {current_pos.y}")
                     return True
                 last_pos = current_pos
@@ -193,53 +236,49 @@ class VSCodeAutomation(ttk.LabelFrame):
                 if not self.button_location:
                     break
                 
-                # Take screenshot of button area
-                screenshot = pyautogui.screenshot(region=(
-                    self.button_location.x - 50,  # Capture area around button
-                    self.button_location.y - 10,
-                    100,
-                    20
-                ))
-                
-                # Check for "Cancel" text
-                text = pytesseract.image_to_string(screenshot).lower()
-                if 'cancel' in text:
-                    self.debug_label.config(text="Cancel button detected - ignoring")
-                    time.sleep(0.1)
-                    continue
+                # Take screenshot
+                screenshot = pyautogui.screenshot()
                 
                 # Get current pixel color
-                current_pixel = screenshot.getpixel((50, 10))  # Center of captured area
+                current_pixel = screenshot.getpixel((self.button_location.x, self.button_location.y))
                 
-                # Check if pixel changed
-                if current_pixel != self.last_pixel:
-                    self.debug_label.config(text=f"Change detected: {current_pixel}")
+                # Check if it's a proceed button (matches proceed color)
+                if self.colors_match(current_pixel, self.button_colors['proceed']):
+                    self.debug_label.config(text="Proceed button detected")
                     
                     # Check cooldown
                     current_time = time.time()
                     if current_time - self.last_click_time >= self.CLICK_COOLDOWN:
                         # Click button
                         pyautogui.click(self.button_location.x, self.button_location.y)
-                        logging.info(f"Auto-clicked button at {self.button_location.x}, {self.button_location.y}")
+                        logging.info(f"Auto-clicked proceed button at {self.button_location.x}, {self.button_location.y}")
                         
                         # Update last click time
                         self.last_click_time = current_time
-                        
-                        # Update last pixel
-                        self.last_pixel = current_pixel
                         
                         # Wait before checking again
                         time.sleep(0.5)
                     else:
                         self.debug_label.config(text="Waiting for cooldown")
+                
+                # Check if it's a cancel button
+                elif self.colors_match(current_pixel, self.button_colors['cancel']):
+                    self.debug_label.config(text="Cancel button detected - ignoring")
                 else:
-                    self.debug_label.config(text="No change")
+                    self.debug_label.config(text="No button detected")
                 
                 time.sleep(0.1)  # Small delay between checks
                 
             except Exception as e:
                 logging.error(f"Error in button monitor: {e}")
                 time.sleep(1)  # Longer delay after error
+    
+    def colors_match(self, color1, color2, tolerance=30):
+        """Check if colors match within tolerance"""
+        return all(
+            abs(c1 - c2) <= tolerance
+            for c1, c2 in zip(color1, color2)
+        )
     
     def set_project(self, project):
         """Set current project"""
@@ -262,10 +301,19 @@ class VSCodeAutomation(ttk.LabelFrame):
                         x, y = config['button_location']
                         self.button_location = pyautogui.Point(x, y)
                         self.location_label.config(text=f"Set: {x}, {y}")
-                        
-                        # Get initial pixel color
-                        screenshot = pyautogui.screenshot()
-                        self.last_pixel = screenshot.getpixel((x, y))
+                    
+                    # Load button colors
+                    if 'button_colors' in config:
+                        self.button_colors = config['button_colors']
+                        # Update color labels
+                        proceed = self.button_colors['proceed']
+                        cancel = self.button_colors['cancel']
+                        self.proceed_color_label.configure(
+                            background=f'#{proceed[0]:02x}{proceed[1]:02x}{proceed[2]:02x}'
+                        )
+                        self.cancel_color_label.configure(
+                            background=f'#{cancel[0]:02x}{cancel[1]:02x}{cancel[2]:02x}'
+                        )
                     
                     # Load automation setting
                     if 'automation_enabled' in config:
@@ -297,6 +345,9 @@ class VSCodeAutomation(ttk.LabelFrame):
         # Save button location
         if self.button_location:
             config['button_location'] = [self.button_location.x, self.button_location.y]
+        
+        # Save button colors
+        config['button_colors'] = self.button_colors
         
         # Save automation setting
         config['automation_enabled'] = self.automation_enabled.get()
