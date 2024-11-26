@@ -34,7 +34,6 @@ class TaskManagement(ttk.LabelFrame):
         ttk.Button(toolbar, text="Archive", command=self.archive_task).pack(side='left', padx=5)
         ttk.Button(toolbar, text="Set Current", command=self.set_current_task).pack(side='left', padx=5)
         ttk.Button(toolbar, text="Tell Cline", command=self.tell_cline).pack(side='left', padx=5)
-        ttk.Button(toolbar, text="Capture Chat Bar", command=self.capture_chat_bar).pack(side='left', padx=5)
         
         # Tasks list
         self.tasks_tree = ttk.Treeview(left_frame, columns=('Status',), show='tree headings')
@@ -55,38 +54,8 @@ class TaskManagement(ttk.LabelFrame):
         # Bind selection
         self.tasks_tree.bind('<<TreeviewSelect>>', self.on_task_select)
     
-    def capture_chat_bar(self):
-        """Capture a screenshot of the Cline chat bar"""
-        try:
-            # Prompt user to position mouse
-            if messagebox.askyesno(
-                "Capture Chat Bar",
-                "Position your mouse over the Cline chat bar and click OK.\nProceed?"
-            ):
-                # Get mouse position
-                x, y = pyautogui.position()
-                
-                # Take screenshot around that position
-                screenshot = pyautogui.screenshot(region=(x-50, y-10, 100, 20))
-                
-                # Save to project's .cline directory if project is selected
-                if self.current_project:
-                    save_dir = os.path.join(self.current_project['path'], '.cline')
-                else:
-                    save_dir = '.cline'
-                
-                os.makedirs(save_dir, exist_ok=True)
-                screenshot.save(os.path.join(save_dir, 'chat_bar.png'))
-                
-                messagebox.showinfo(
-                    "Success",
-                    "Chat bar location captured.\nThe GUI will now click this location automatically."
-                )
-        except Exception as e:
-            messagebox.showerror("Error", f"Failed to capture chat bar: {e}")
-    
     def tell_cline(self):
-        """Tell Cline about the current task using PyAutoGUI"""
+        """Tell Cline about the current task using keyboard shortcuts"""
         if not self.current_project:
             messagebox.showwarning("Warning", "Please select a project first")
             return
@@ -106,39 +75,21 @@ class TaskManagement(ttk.LabelFrame):
         )
         
         try:
-            # Look for chat bar screenshot in project directory
-            chat_bar = os.path.join(self.current_project['path'], '.cline', 'chat_bar.png')
-            if not os.path.exists(chat_bar):
-                # Fall back to global chat bar
-                chat_bar = '.cline/chat_bar.png'
+            # Copy task path to clipboard
+            pyperclip.copy(f"task {task_path}")
             
-            if not os.path.exists(chat_bar):
-                messagebox.showwarning(
-                    "Chat Bar Not Found",
-                    "Please capture the chat bar location first using the 'Capture Chat Bar' button"
-                )
-                return
-            
-            # Try to locate chat bar
-            location = pyautogui.locateOnScreen(chat_bar, confidence=0.9)
-            if location:
-                # Click chat bar
-                x, y = pyautogui.center(location)
-                pyautogui.click(x, y)
-                time.sleep(0.5)  # Wait for focus
+            # Prompt user
+            if messagebox.askyesno(
+                "Tell Cline",
+                "Task command copied to clipboard.\nClick OK, then press Cmd+V (Mac) or Ctrl+V (Windows) to paste in Cline.\nProceed?"
+            ):
+                # Wait for user to switch to Cline
+                time.sleep(1)
                 
-                # Type task path
-                pyautogui.write(f"task {task_path}")
+                # Paste and press enter
+                pyautogui.hotkey('command' if os.name == 'posix' else 'ctrl', 'v')
+                time.sleep(0.1)
                 pyautogui.press('enter')
-            else:
-                # Fall back to manual timing
-                if messagebox.askyesno(
-                    "Tell Cline",
-                    "Could not find chat bar. Click OK, then click in the Cline chat bar within 3 seconds.\nProceed?"
-                ):
-                    time.sleep(3)
-                    pyautogui.write(f"task {task_path}")
-                    pyautogui.press('enter')
             
         except Exception as e:
             messagebox.showerror("Error", f"Failed to tell Cline: {e}")
