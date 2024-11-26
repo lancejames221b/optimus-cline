@@ -7,6 +7,17 @@ from .command_history import CommandHistory
 from .project_management import ProjectManagement
 from .computer_use import ComputerUse, ComputerTask, ResourceType, PermissionLevel
 from .computer_use_manager import ComputerUseManager
+from .ai_models import (
+    AIModelManager,
+    ModelCapability,
+    TaskRequirement,
+    BudgetError,
+    ModelNotFoundError,
+    OpenRouterClient,
+    CostTracker,
+    ModelSelector
+)
+from .ai_model_manager import AIModelManagerGUI
 from .utils import setup_logging, make_window_front, bind_window_events
 
 __all__ = [
@@ -22,6 +33,15 @@ __all__ = [
     'ResourceType',
     'PermissionLevel',
     'ComputerUseManager',
+    'AIModelManager',
+    'ModelCapability',
+    'TaskRequirement',
+    'BudgetError',
+    'ModelNotFoundError',
+    'OpenRouterClient',
+    'CostTracker',
+    'ModelSelector',
+    'AIModelManagerGUI',
     'setup_logging',
     'make_window_front',
     'bind_window_events'

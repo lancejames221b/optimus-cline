@@ -4,17 +4,36 @@
 
 **1. Introduction**
 
-Cline is an intelligent computer use and task automation system that leverages Claude's agentic capabilities to assist with a wide range of computer tasks. While originally focused on development workflows, Cline now expands to provide comprehensive computer automation capabilities for both development and general administrative tasks.
-
-The system combines AI-powered automation with a secure GUI interface to enable safe and efficient computer use across multiple applications and workflows.
+Cline is an intelligent computer use and task automation system that leverages multiple AI models through OpenRouter to provide comprehensive computer automation capabilities. The system intelligently selects and combines different models based on task requirements while maintaining strict cost controls and security measures.
 
 **2. Core Capabilities**
 
+* **AI Integration:**
+    * OpenRouter API integration
+    * Multi-model task distribution
+    * Cost estimation and tracking
+    * Budget management
+    * Model selection optimization
+
+* **Models and Use Cases:**
+    * Claude Sonnet Beta (Latest):
+        * Primary computer use capabilities
+        * Code generation and modification
+        * Complex task execution
+    * GPT-4 and Variants:
+        * Complex reasoning tasks
+        * Decision making
+        * Strategy planning
+    * Gemini Pro 1.5:
+        * Large context processing
+        * Bulk data analysis
+        * Token-efficient tasks
+
 * **Computer Use:**
-    * File system operations (read, write, edit)
+    * File system operations
     * Application interaction
     * Browser automation
-    * GUI element detection and interaction
+    * GUI element detection
     * Command execution
     * Screenshot analysis
     * Text extraction and OCR
@@ -29,10 +48,10 @@ The system combines AI-powered automation with a secure GUI interface to enable 
 **3. Goals**
 
 * **Enable AI Computer Use:** Provide a safe interface for AI to interact with the computer
-* **Automate Administrative Tasks:** Streamline common office and administrative work
-* **Enhance Development:** Improve development workflows and automation
+* **Optimize Model Usage:** Intelligently select and combine AI models for tasks
+* **Control Costs:** Maintain strict budget controls and cost estimation
 * **Ensure Security:** Maintain strict security controls and approval workflows
-* **Increase Productivity:** Reduce manual effort through intelligent automation
+* **Maximize Efficiency:** Use the most appropriate model for each subtask
 * **Enable Integration:** Connect with common applications and services
 
 **4. Target Users**
@@ -43,15 +62,34 @@ The system combines AI-powered automation with a secure GUI interface to enable 
 * DevOps engineers
 * System administrators
 * Project managers
-* Anyone seeking computer task automation
+* Anyone seeking AI-powered automation
 
 **5. Product Features**
+
+* **AI Model Management:**
+    * **OpenRouter Integration:**
+        * API key management
+        * Model availability checking
+        * Usage tracking
+        * Cost monitoring
+    
+    * **Model Selection:**
+        * Task analysis
+        * Model capability matching
+        * Cost optimization
+        * Performance tracking
+    
+    * **Cost Control:**
+        * Pre-task estimation
+        * Budget limits
+        * Usage alerts
+        * Cost optimization
 
 * **Computer Interaction:**
     * **File System:**
         * Read and write files
-        * Edit documents (text, markdown, code)
-        * File organization and management
+        * Edit documents
+        * File organization
         * Search and analysis
     
     * **Application Control:**
@@ -65,150 +103,116 @@ The system combines AI-powered automation with a secure GUI interface to enable 
         * Fill forms
         * Click elements
         * Extract information
-        * Handle multiple tabs
     
     * **Communication Tools:**
         * Slack integration
         * Email composition
         * Calendar management
         * Meeting scheduling
-    
-    * **Document Processing:**
-        * Read and edit documents
-        * Format conversion
-        * Template filling
-        * Data extraction
-    
-    * **System Operations:**
-        * Command execution
-        * Process management
-        * Environment configuration
-        * System monitoring
 
 * **Security and Control:**
     * **Approval System:**
         * File change approval
         * Command execution approval
-        * UI interaction approval
+        * Cost approval
         * Resource access control
     
     * **Monitoring:**
         * Activity logging
         * Resource usage tracking
+        * Cost tracking
         * Error detection
-        * Security checks
-    
-    * **Configuration:**
-        * Per-project settings
-        * Application profiles
-        * Security policies
-        * Resource limits
 
-* **Integration Framework:**
-    * **Application APIs:**
-        * VS Code extension API
-        * Slack API
-        * Email providers
-        * Calendar services
-    
-    * **System APIs:**
-        * Accessibility APIs
-        * Window management
-        * Clipboard access
-        * File system events
-    
-    * **Service Connectors:**
-        * Cloud services
-        * Development tools
-        * Productivity apps
-        * Communication platforms
+**6. AI Model Strategy**
 
-**6. User Stories**
+* **Claude Sonnet Beta:**
+    * Primary computer interaction
+    * Complex automation tasks
+    * Code generation and editing
+    * Document processing
+    * Primary reasoning tasks
 
-* As a knowledge worker, I want AI to help me process documents and emails
-* As an admin, I want to automate repetitive computer tasks
-* As a developer, I want AI to help with coding and debugging
-* As a manager, I want to automate report generation and data analysis
-* As a user, I want to safely delegate computer tasks to AI
-* As a team member, I want AI to help manage communication and scheduling
+* **GPT-4 Variants:**
+    * Complex decision making
+    * Strategy planning
+    * Alternative reasoning
+    * Verification tasks
+    * Secondary opinions
 
-**7. Technical Requirements**
+* **Gemini Pro 1.5:**
+    * Large document processing
+    * Bulk data analysis
+    * Token-efficient tasks
+    * Parallel processing
+    * Resource-intensive operations
 
-* **Core Framework:**
-    * Python-based automation engine
-    * Electron GUI interface
-    * Multi-process architecture
-    * Plugin system for extensions
-    
-* **Interaction Layer:**
-    * GUI element detection
-    * OCR capabilities
-    * Event monitoring
-    * Input simulation
-    
-* **Security Layer:**
-    * Sandboxed execution
-    * Permission system
-    * Resource limits
+**7. Cost Management**
+
+* **Estimation:**
+    * Pre-task token estimation
+    * Model cost calculation
+    * Alternative model suggestions
+    * Cost optimization paths
+
+* **Budgeting:**
+    * Project-level budgets
+    * Task-level limits
+    * Alert thresholds
+    * Usage tracking
+
+* **Optimization:**
+    * Model selection based on cost
+    * Token usage optimization
+    * Batch processing
+    * Cache utilization
+
+**8. Technical Requirements**
+
+* **OpenRouter Integration:**
+    * API client implementation
+    * Model availability checking
+    * Usage tracking
+    * Error handling
+
+* **Cost Tracking:**
+    * Token counting
+    * Cost calculation
+    * Budget enforcement
+    * Usage analytics
+
+* **Security:**
+    * API key management
+    * Resource permissions
+    * Task approval workflow
     * Activity monitoring
 
-**8. Security Requirements**
+**9. Implementation Phases**
 
-* Granular permission system
-* Secure credential storage
-* Activity audit logging
-* Resource usage limits
-* Data access controls
-* Approval workflows
+**Phase 1: Core AI Integration**
+* OpenRouter API integration
+* Basic model selection
+* Cost tracking
+* Security framework
 
-**9. Future Enhancements**
+**Phase 2: Advanced Features**
+* Multi-model orchestration
+* Cost optimization
+* Advanced security
+* Performance analytics
 
-* Natural language task description
-* Workflow learning and optimization
-* Multi-step task automation
-* Context-aware assistance
-* Advanced document understanding
-* Collaborative task execution
+**Phase 3: Optimization**
+* Advanced model selection
+* Cost optimization
+* Caching system
+* Performance tuning
 
 **10. Success Metrics**
 
-* Task automation success rate
-* Time saved per task
-* Error reduction
+* Cost efficiency
+* Task success rate
+* Model selection accuracy
 * User satisfaction
 * Security compliance
 * Resource efficiency
 
-**11. Implementation Phases**
-
-**Phase 1: Core Computer Use**
-* Basic file operations
-* Simple GUI automation
-* Command execution
-* Browser automation
-* Security framework
-
-**Phase 2: Application Integration**
-* VS Code integration
-* Slack integration
-* Document processing
-* Email automation
-* Calendar management
-
-**Phase 3: Advanced Features**
-* Workflow automation
-* Natural language interface
-* Multi-application tasks
-* AI-powered optimization
-* Advanced security controls
-
-**12. Risk Mitigation**
-
-* Strict security controls
-* User approval workflows
-* Resource usage limits
-* Error recovery
-* Activity monitoring
-* Data protection
-
-This PRD outlines the expansion of Cline into a comprehensive computer use automation system, leveraging Claude's capabilities while maintaining strong security and user control. The system aims to safely automate a wide range of computer tasks while providing a robust framework for future enhancements and integrations.
+This PRD outlines the integration of multiple AI models through OpenRouter, with a focus on cost control and efficient model selection. The system aims to provide comprehensive computer automation while maintaining strict budget controls and security measures.
