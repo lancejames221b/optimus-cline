@@ -113,24 +113,46 @@ class TestDialog:
         y = (self.root.winfo_screenheight() // 2) - (height // 2)
         self.root.geometry(f'+{x}+{y}')
         
-        # Start button cycle in a separate thread
-        self.cycle_thread = threading.Thread(target=self.cycle_buttons, daemon=True)
-        self.cycle_thread.start()
-        
-        # Start test thread
-        self.test_thread = threading.Thread(target=self.test_color_detection, daemon=True)
-        self.test_thread.start()
-        
-        # Start update thread
-        self.update_thread = threading.Thread(target=self.process_updates, daemon=True)
-        self.update_thread.start()
-        
-        # Start coordinate thread
-        self.coord_thread = threading.Thread(target=self.update_coordinates, daemon=True)
-        self.coord_thread.start()
+        # Start threads
+        self.threads = []
+        self.start_threads()
         
         # Handle window close
         self.root.protocol("WM_DELETE_WINDOW", self.on_close)
+        
+        # Start coordinate updates
+        self.update_coordinates()
+    
+    def start_threads(self):
+        """Start worker threads"""
+        # Button cycle thread
+        cycle_thread = threading.Thread(target=self.cycle_buttons, daemon=True)
+        cycle_thread.start()
+        self.threads.append(cycle_thread)
+        
+        # Test thread
+        test_thread = threading.Thread(target=self.test_color_detection, daemon=True)
+        test_thread.start()
+        self.threads.append(test_thread)
+        
+        # Update thread
+        update_thread = threading.Thread(target=self.process_updates, daemon=True)
+        update_thread.start()
+        self.threads.append(update_thread)
+    
+    def update_coordinates(self):
+        """Update mouse coordinates display"""
+        if not self.running:
+            return
+            
+        try:
+            pos = pyautogui.position()
+            self.coord_label.config(text=f"Mouse: ({pos.x}, {pos.y})")
+        except:
+            pass
+            
+        # Schedule next update
+        self.root.after(100, self.update_coordinates)
     
     def capture_proceed_color(self):
         """Capture proceed button color"""
@@ -151,19 +173,6 @@ class TestDialog:
         self.testing = self.test_var.get()
         if not self.testing:
             self.update_queue.put(('test', ''))
-    
-    def update_coordinates(self):
-        """Update mouse coordinates display"""
-        last_pos = None
-        while self.running:
-            try:
-                pos = pyautogui.position()
-                if pos != last_pos:
-                    self.update_queue.put(('coord', f"Mouse: ({pos.x}, {pos.y})"))
-                    last_pos = pos
-            except:
-                pass
-            time.sleep(0.1)
     
     def test_color_detection(self):
         """Test color detection at current mouse position"""
@@ -228,8 +237,6 @@ class TestDialog:
                             self.test_label.config(text=message, fg='white')
                         else:
                             self.test_label.config(text=message, fg='red')
-                elif update_type == 'coord':
-                    self.coord_label.config(text=data)
             except:
                 pass
             time.sleep(0.05)
@@ -283,6 +290,11 @@ class TestDialog:
     def on_close(self):
         """Handle window close"""
         self.running = False
+        
+        # Wait for threads to finish
+        for thread in self.threads:
+            thread.join(timeout=1)
+        
         self.root.destroy()
     
     def run(self):
