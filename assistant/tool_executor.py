@@ -9,6 +9,7 @@ from typing import Optional, Dict, Any, List, Callable
 from dataclasses import dataclass
 from datetime import datetime
 from vscode_integration import ToolRequest
+from browser_control import BrowserControl, BrowserAction
 
 @dataclass
 class ToolResult:
@@ -26,6 +27,9 @@ class ToolExecutor:
         
         # Working directory
         self.work_dir = os.getcwd()
+        
+        # Browser control
+        self.browser = BrowserControl()
         
         # Tool handlers
         self.handlers: Dict[str, Callable[[Dict[str, Any]], ToolResult]] = {
@@ -278,11 +282,31 @@ class ToolExecutor:
                     error="No action provided"
                 )
             
-            # TODO: Implement browser control
-            return ToolResult(
-                success=False,
-                error="Not implemented"
+            # Create browser action
+            browser_action = BrowserAction(
+                action=action,
+                params=params,
+                timestamp=datetime.now().isoformat()
             )
+            
+            # Execute action
+            result = await self.browser.execute(browser_action)
+            
+            # Convert result
+            if result.success:
+                output = {
+                    'screenshot': result.screenshot,
+                    'logs': result.logs
+                }
+                return ToolResult(
+                    success=True,
+                    output=json.dumps(output, indent=2)
+                )
+            else:
+                return ToolResult(
+                    success=False,
+                    error=result.error
+                )
                 
         except Exception as e:
             return ToolResult(

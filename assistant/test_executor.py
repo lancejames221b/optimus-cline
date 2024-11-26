@@ -143,110 +143,89 @@ async def test_file_listing():
     print(f"Error: {result.error}")
     print(f"Duration: {result.duration}s")
 
-async def test_file_search():
-    """Test search_files tool"""
-    print("\n=== Test 4: File Search ===")
+async def test_browser_actions():
+    """Test browser_action tool"""
+    print("\n=== Test 4: Browser Actions ===")
     
     executor = ToolExecutor()
-    test_dir = 'test_files'
     
     try:
-        # Create test files
-        os.makedirs(test_dir, exist_ok=True)
-        
-        # Create test files with content
-        files = {
-            'test1.py': 'def hello():\n    print("Hello")\n\ndef main():\n    hello()',
-            'test2.py': 'class Test:\n    def run(self):\n        print("Running")',
-            'test.txt': 'This is a test file\nwith multiple lines\nand some content'
-        }
-        
-        for name, content in files.items():
-            path = os.path.join(test_dir, name)
-            with open(path, 'w') as f:
-                f.write(content)
-        
-        # Test Python function search
+        # Test launch
         request = ToolRequest(
-            tool='search_files',
+            tool='browser_action',
             params={
-                'path': test_dir,
-                'regex': r'def\s+\w+',
-                'file_pattern': '*.py'
+                'action': 'launch',
+                'url': 'https://example.com'
             },
             timestamp='now'
         )
         
         result = await executor.execute(request)
-        print("\nPython function search test:")
+        print("\nLaunch test:")
         print(f"Success: {result.success}")
         if result.success:
-            matches = json.loads(result.output)
-            print(f"Found {len(matches)} matches:")
-            for match in matches:
-                print(f"\nFile: {match['file']}")
-                print(f"Line: {match['line']}")
-                print("Context:")
-                print(match['context'])
+            output = json.loads(result.output)
+            print(f"Screenshot: {output['screenshot']}")
+            print(f"Logs: {output['logs']}")
         print(f"Error: {result.error}")
         print(f"Duration: {result.duration}s")
         
-        # Test content search
+        # Test click
         request = ToolRequest(
-            tool='search_files',
+            tool='browser_action',
             params={
-                'path': test_dir,
-                'regex': r'test',
-                'file_pattern': '*'
+                'action': 'click',
+                'coordinate': '450,300'
             },
             timestamp='now'
         )
         
         result = await executor.execute(request)
-        print("\nContent search test:")
+        print("\nClick test:")
         print(f"Success: {result.success}")
         if result.success:
-            matches = json.loads(result.output)
-            print(f"Found {len(matches)} matches:")
-            for match in matches:
-                print(f"\nFile: {match['file']}")
-                print(f"Line: {match['line']}")
-                print("Context:")
-                print(match['context'])
+            output = json.loads(result.output)
+            print(f"Screenshot: {output['screenshot']}")
+            print(f"Logs: {output['logs']}")
         print(f"Error: {result.error}")
         print(f"Duration: {result.duration}s")
         
-    finally:
-        # Clean up
-        for name in files:
-            path = os.path.join(test_dir, name)
-            if os.path.exists(path):
-                os.remove(path)
-        if os.path.exists(test_dir):
-            os.rmdir(test_dir)
-
-async def test_browser():
-    """Test browser_action tool"""
-    print("\n=== Test 5: Browser Action ===")
-    
-    executor = ToolExecutor()
-    
-    # Test browser launch
-    request = ToolRequest(
-        tool='browser_action',
-        params={
-            'action': 'launch',
-            'url': 'https://example.com'
-        },
-        timestamp='now'
-    )
-    
-    result = await executor.execute(request)
-    print("\nBrowser launch test:")
-    print(f"Success: {result.success}")
-    print(f"Output: {result.output}")
-    print(f"Error: {result.error}")
-    print(f"Duration: {result.duration}s")
+        # Test scroll
+        request = ToolRequest(
+            tool='browser_action',
+            params={
+                'action': 'scroll_down',
+            },
+            timestamp='now'
+        )
+        
+        result = await executor.execute(request)
+        print("\nScroll test:")
+        print(f"Success: {result.success}")
+        if result.success:
+            output = json.loads(result.output)
+            print(f"Screenshot: {output['screenshot']}")
+            print(f"Logs: {output['logs']}")
+        print(f"Error: {result.error}")
+        print(f"Duration: {result.duration}s")
+        
+        # Test close
+        request = ToolRequest(
+            tool='browser_action',
+            params={
+                'action': 'close',
+            },
+            timestamp='now'
+        )
+        
+        result = await executor.execute(request)
+        print("\nClose test:")
+        print(f"Success: {result.success}")
+        print(f"Error: {result.error}")
+        print(f"Duration: {result.duration}s")
+        
+    except Exception as e:
+        print(f"Error: {e}")
 
 async def main():
     """Run tool executor tests"""
@@ -257,8 +236,7 @@ async def main():
     await test_command_execution()
     await test_file_operations()
     await test_file_listing()
-    await test_file_search()
-    await test_browser()
+    await test_browser_actions()
 
 if __name__ == '__main__':
     try:
