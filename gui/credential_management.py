@@ -11,15 +11,6 @@ class CredentialManagement(ttk.LabelFrame):
         # State
         self.keys_file = None
         
-        # Keys file frame
-        keys_frame = ttk.Frame(self)
-        keys_frame.pack(fill='x', pady=5)
-        
-        ttk.Label(keys_frame, text="Keys file:").pack(side='left')
-        self.keys_label = ttk.Label(keys_frame, text="No file selected")
-        self.keys_label.pack(side='left', padx=5)
-        ttk.Button(keys_frame, text="Select File", command=self.select_keys_file).pack(side='left', padx=5)
-        
         # Add credential frame
         cred_frame = ttk.LabelFrame(self, text="Add Credential")
         cred_frame.pack(fill='x', padx=5, pady=5)
@@ -52,25 +43,15 @@ class CredentialManagement(ttk.LabelFrame):
         self.creds_tree.heading('Value', text='Value')
         self.creds_tree.pack(expand=True, fill='both', pady=5)
     
-    def select_keys_file(self):
-        """Select a keys.txt file"""
-        file_path = filedialog.askopenfilename(
-            title="Select keys.txt",
-            filetypes=[("Text files", "*.txt")]
-        )
-        if file_path:
-            self.set_keys_file(file_path)
-    
     def set_keys_file(self, file_path):
         """Set the keys file and update UI"""
         self.keys_file = file_path
-        self.keys_label.config(text=os.path.basename(file_path))
         self.refresh_credentials()
     
     def add_credential(self):
         """Add a new credential"""
         if not self.keys_file:
-            messagebox.showwarning("Warning", "Please select a keys.txt file first")
+            messagebox.showwarning("Warning", "No keys file configured in project settings")
             return
         
         service = self.service_entry.get().strip()
