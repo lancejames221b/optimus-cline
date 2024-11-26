@@ -1,6 +1,93 @@
 #!/usr/bin/env python3
-[Previous content remains the same until automate_vscode_approval method...]
+import tkinter as tk
+from tkinter import ttk, scrolledtext, filedialog, messagebox
+import subprocess
+import threading
+import queue
+import json
+import os
+import logging
+from datetime import datetime
 
+class ClineGUI:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Cline GUI")
+        
+        # State
+        self.current_project = None
+        self.command_queue = queue.Queue()
+        self.output_queue = queue.Queue()
+        
+        # Create main layout
+        self.create_layout()
+        
+        # Start command processing thread
+        threading.Thread(target=self.process_commands, daemon=True).start()
+        
+        # Start output processing
+        self.process_output()
+    
+    def create_layout(self):
+        """Create main window layout"""
+        # Project selection
+        project_frame = ttk.Frame(self.root)
+        project_frame.pack(fill='x', padx=5, pady=5)
+        
+        ttk.Button(
+            project_frame,
+            text="Select Project",
+            command=self.select_project
+        ).pack(side='left', padx=5)
+        
+        self.project_label = ttk.Label(project_frame, text="No project selected")
+        self.project_label.pack(side='left', padx=5)
+        
+        # Main content
+        content = ttk.PanedWindow(self.root, orient='horizontal')
+        content.pack(fill='both', expand=True, padx=5, pady=5)
+        
+        # Left side - Tasks
+        left_frame = ttk.Frame(content)
+        content.add(left_frame)
+        
+        tasks_frame = ttk.LabelFrame(left_frame, text="Tasks")
+        tasks_frame.pack(fill='both', expand=True, padx=5, pady=5)
+        
+        self.tasks_tree = ttk.Treeview(
+            tasks_frame,
+            columns=('Status',),
+            show='tree headings'
+        )
+        self.tasks_tree.heading('Status', text='Status')
+        self.tasks_tree.pack(fill='both', expand=True)
+        
+        # Right side - Command history & output
+        right_frame = ttk.Frame(content)
+        content.add(right_frame)
+        
+        # Command history
+        history_frame = ttk.LabelFrame(right_frame, text="Command History")
+        history_frame.pack(fill='x', padx=5, pady=5)
+        
+        self.cmd_tree = ttk.Treeview(
+            history_frame,
+            columns=('Time', 'Status', 'Duration'),
+            show='headings',
+            height=5
+        )
+        self.cmd_tree.heading('Time', text='Time')
+        self.cmd_tree.heading('Status', text='Status')
+        self.cmd_tree.heading('Duration', text='Duration')
+        self.cmd_tree.pack(fill='x')
+        
+        # Command output
+        output_frame = ttk.LabelFrame(right_frame, text="Output")
+        output_frame.pack(fill='both', expand=True, padx=5, pady=5)
+        
+        self.output_text = scrolledtext.ScrolledText(output_frame)
+        self.output_text.pack(fill='both', expand=True)
+    
     def select_project(self):
         """Select project directory"""
         dir_path = filedialog.askdirectory(title="Select Project Directory")
