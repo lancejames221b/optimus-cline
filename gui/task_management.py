@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import ttk, scrolledtext, messagebox
 import json
 import os
+import subprocess
 from datetime import datetime
 
 class TaskManagement(ttk.LabelFrame):
@@ -124,6 +125,10 @@ class TaskManagement(ttk.LabelFrame):
         ttk.Button(btn_frame, text="Cancel", command=dialog.destroy).pack(side='right')
     
     def open_task(self):
+        if not self.current_project:
+            messagebox.showwarning("Warning", "Please select a project first")
+            return
+            
         selected = self.tasks_tree.selection()
         if not selected:
             messagebox.showwarning("Warning", "Please select a task")
@@ -147,6 +152,10 @@ class TaskManagement(ttk.LabelFrame):
                 os.startfile(task_path)
     
     def archive_task(self):
+        if not self.current_project:
+            messagebox.showwarning("Warning", "Please select a project first")
+            return
+            
         selected = self.tasks_tree.selection()
         if not selected:
             messagebox.showwarning("Warning", "Please select a task")

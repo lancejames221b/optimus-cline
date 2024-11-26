@@ -53,16 +53,22 @@ class CredentialManagement(ttk.LabelFrame):
         self.creds_tree.pack(expand=True, fill='both', pady=5)
     
     def select_keys_file(self):
+        """Select a keys.txt file"""
         file_path = filedialog.askopenfilename(
             title="Select keys.txt",
             filetypes=[("Text files", "*.txt")]
         )
         if file_path:
-            self.keys_file = file_path
-            self.keys_label.config(text=os.path.basename(file_path))
-            self.refresh_credentials()
+            self.set_keys_file(file_path)
+    
+    def set_keys_file(self, file_path):
+        """Set the keys file and update UI"""
+        self.keys_file = file_path
+        self.keys_label.config(text=os.path.basename(file_path))
+        self.refresh_credentials()
     
     def add_credential(self):
+        """Add a new credential"""
         if not self.keys_file:
             messagebox.showwarning("Warning", "Please select a keys.txt file first")
             return
@@ -120,6 +126,7 @@ class CredentialManagement(ttk.LabelFrame):
         self.refresh_credentials()
     
     def refresh_credentials(self):
+        """Refresh the credentials list"""
         if not self.keys_file:
             return
         
