@@ -6,6 +6,7 @@ import pyautogui
 import time
 import os
 import json
+import threading
 from datetime import datetime
 
 class VSCodeAutomation(ttk.LabelFrame):
@@ -15,16 +16,10 @@ class VSCodeAutomation(ttk.LabelFrame):
         
         # State
         self.current_project = None
-        self.button_locations = {
-            'save': None,
-            'run': None,
-            'approve': None
-        }
-        self.automation_enabled = {
-            'save': tk.BooleanVar(value=False),
-            'run': tk.BooleanVar(value=False),
-            'approve': tk.BooleanVar(value=False)
-        }
+        self.button_location = None
+        self.automation_enabled = tk.BooleanVar(value=False)
+        self.monitoring = False
+        self.monitor_thread = None
         
         # VS Code commands
         self.VSCODE_COMMANDS = {
@@ -71,72 +66,35 @@ class VSCodeAutomation(ttk.LabelFrame):
         setup_frame = ttk.LabelFrame(left_frame, text="Button Setup")
         setup_frame.pack(fill='x', padx=5, pady=5)
         
-        # Save button setup
-        save_frame = ttk.Frame(setup_frame)
-        save_frame.pack(fill='x', padx=5, pady=2)
-        
-        ttk.Checkbutton(
-            save_frame,
-            text="Auto Save",
-            variable=self.automation_enabled['save'],
-            command=lambda: self.save_automation_settings()
-        ).pack(side='left')
+        # Button location
+        location_frame = ttk.Frame(setup_frame)
+        location_frame.pack(fill='x', padx=5, pady=2)
         
         ttk.Button(
-            save_frame,
-            text="Set Location",
-            command=lambda: self.capture_button_location('save')
+            location_frame,
+            text="Set Button Location",
+            command=self.capture_button_location
         ).pack(side='left', padx=5)
         
-        self.save_label = ttk.Label(save_frame, text="Not set")
-        self.save_label.pack(side='left', padx=5)
+        self.location_label = ttk.Label(location_frame, text="Not set")
+        self.location_label.pack(side='left', padx=5)
         
-        # Run button setup
-        run_frame = ttk.Frame(setup_frame)
-        run_frame.pack(fill='x', padx=5, pady=2)
+        # Automation toggle
+        toggle_frame = ttk.Frame(setup_frame)
+        toggle_frame.pack(fill='x', padx=5, pady=2)
         
         ttk.Checkbutton(
-            run_frame,
-            text="Auto Run",
-            variable=self.automation_enabled['run'],
-            command=lambda: self.save_automation_settings()
+            toggle_frame,
+            text="Enable Auto-Click",
+            variable=self.automation_enabled,
+            command=self.toggle_automation
         ).pack(side='left')
-        
-        ttk.Button(
-            run_frame,
-            text="Set Location",
-            command=lambda: self.capture_button_location('run')
-        ).pack(side='left', padx=5)
-        
-        self.run_label = ttk.Label(run_frame, text="Not set")
-        self.run_label.pack(side='left', padx=5)
-        
-        # Approve button setup
-        approve_frame = ttk.Frame(setup_frame)
-        approve_frame.pack(fill='x', padx=5, pady=2)
-        
-        ttk.Checkbutton(
-            approve_frame,
-            text="Auto Approve",
-            variable=self.automation_enabled['approve'],
-            command=lambda: self.save_automation_settings()
-        ).pack(side='left')
-        
-        ttk.Button(
-            approve_frame,
-            text="Set Location",
-            command=lambda: self.capture_button_location('approve')
-        ).pack(side='left', padx=5)
-        
-        self.approve_label = ttk.Label(approve_frame, text="Not set")
-        self.approve_label.pack(side='left', padx=5)
         
         # Instructions
         instructions = ttk.Label(
             setup_frame,
-            text="Click 'Set Location' when each dialog appears.\n" +
-                 "Enable checkboxes for buttons you want to automate.\n" +
-                 "Settings are saved per project.",
+            text="Click 'Set Button Location' when any dialog button appears.\n" +
+                 "Enable Auto-Click to automatically click buttons when they appear.",
             justify='left'
         )
         instructions.pack(fill='x', padx=5, pady=5)
@@ -159,16 +117,16 @@ class VSCodeAutomation(ttk.LabelFrame):
         self.vscode_history.heading('Status', text='Status')
         self.vscode_history.pack(fill='both', expand=True, pady=5)
     
-    def capture_button_location(self, button_type):
+    def capture_button_location(self):
         """Capture VS Code button location"""
         if not self.current_project:
             messagebox.showwarning("Warning", "Please select a project first")
             return
             
         if messagebox.askyesno(
-            f"Set {button_type.title()} Button Location",
-            f"Click OK, then click the {button_type} button in VS Code.\n" +
-            "This location will be saved for future automation."
+            "Set Button Location",
+            "Click OK, then click any VS Code dialog button.\n" +
+            "This location will be used for all buttons."
         ):
             # Wait for user to click button
             time.sleep(0.5)
@@ -181,20 +139,61 @@ class VSCodeAutomation(ttk.LabelFrame):
             while time.time() - start_time < 5:  # 5 second timeout
                 current_pos = pyautogui.position()
                 if last_pos == current_pos:  # Mouse stopped
-                    self.button_locations[button_type] = current_pos
-                    self.save_button_locations()
-                    
-                    # Update label
-                    label = getattr(self, f"{button_type}_label")
-                    label.config(text=f"Set: {current_pos.x}, {current_pos.y}")
-                    
-                    logging.info(f"Captured {button_type} button location: {current_pos.x}, {current_pos.y}")
+                    self.button_location = current_pos
+                    self.save_button_location()
+                    self.location_label.config(text=f"Set: {current_pos.x}, {current_pos.y}")
+                    logging.info(f"Captured button location: {current_pos.x}, {current_pos.y}")
                     return True
                 last_pos = current_pos
                 time.sleep(0.1)
             
-            messagebox.showwarning("Timeout", f"Failed to capture {button_type} button location")
+            messagebox.showwarning("Timeout", "Failed to capture button location")
             return False
+    
+    def toggle_automation(self):
+        """Toggle button automation"""
+        if self.automation_enabled.get():
+            if not self.button_location:
+                messagebox.showwarning(
+                    "Warning",
+                    "Please set button location first"
+                )
+                self.automation_enabled.set(False)
+                return
+            
+            # Start monitoring if not already running
+            if not self.monitoring:
+                self.monitoring = True
+                self.monitor_thread = threading.Thread(target=self.monitor_buttons, daemon=True)
+                self.monitor_thread.start()
+        else:
+            self.monitoring = False
+            if self.monitor_thread:
+                self.monitor_thread.join(timeout=1)
+                self.monitor_thread = None
+    
+    def monitor_buttons(self):
+        """Monitor for button appearance"""
+        while self.monitoring:
+            try:
+                if not self.button_location:
+                    break
+                
+                # Take screenshot
+                screenshot = pyautogui.screenshot()
+                
+                # Check button location
+                color = screenshot.getpixel((self.button_location.x, self.button_location.y))
+                if self.is_button_color(color):
+                    pyautogui.click(self.button_location.x, self.button_location.y)
+                    logging.info(f"Auto-clicked button at {self.button_location.x}, {self.button_location.y}")
+                    time.sleep(0.5)  # Wait before checking again
+                
+                time.sleep(0.1)  # Small delay between checks
+                
+            except Exception as e:
+                logging.error(f"Error in button monitor: {e}")
+                time.sleep(1)  # Longer delay after error
     
     def set_project(self, project):
         """Set current project"""
@@ -212,30 +211,21 @@ class VSCodeAutomation(ttk.LabelFrame):
                 with open(config_path) as f:
                     config = json.load(f)
                     
-                    # Load button locations
-                    if 'button_locations' in config:
-                        self.button_locations = {
-                            k: pyautogui.Point(x=v[0], y=v[1])
-                            for k, v in config['button_locations'].items()
-                        }
-                        
-                        # Update labels
-                        for button_type in ['save', 'run', 'approve']:
-                            if button_type in self.button_locations:
-                                pos = self.button_locations[button_type]
-                                label = getattr(self, f"{button_type}_label")
-                                label.config(text=f"Set: {pos.x}, {pos.y}")
+                    # Load button location
+                    if 'button_location' in config:
+                        x, y = config['button_location']
+                        self.button_location = pyautogui.Point(x, y)
+                        self.location_label.config(text=f"Set: {x}, {y}")
                     
-                    # Load automation settings
+                    # Load automation setting
                     if 'automation_enabled' in config:
-                        for button_type, enabled in config['automation_enabled'].items():
-                            self.automation_enabled[button_type].set(enabled)
+                        self.automation_enabled.set(config['automation_enabled'])
+                        if config['automation_enabled']:
+                            self.toggle_automation()  # Start monitoring if enabled
             except:
-                self.button_locations = {'save': None, 'run': None, 'approve': None}
-                for button_type in ['save', 'run', 'approve']:
-                    label = getattr(self, f"{button_type}_label")
-                    label.config(text="Not set")
-                    self.automation_enabled[button_type].set(False)
+                self.button_location = None
+                self.location_label.config(text="Not set")
+                self.automation_enabled.set(False)
     
     def save_settings(self):
         """Save settings for current project"""
@@ -254,25 +244,18 @@ class VSCodeAutomation(ttk.LabelFrame):
         else:
             config = {}
         
-        # Save button locations
-        config['button_locations'] = {
-            k: [v.x, v.y] for k, v in self.button_locations.items() if v is not None
-        }
+        # Save button location
+        if self.button_location:
+            config['button_location'] = [self.button_location.x, self.button_location.y]
         
-        # Save automation settings
-        config['automation_enabled'] = {
-            k: v.get() for k, v in self.automation_enabled.items()
-        }
+        # Save automation setting
+        config['automation_enabled'] = self.automation_enabled.get()
         
         with open(config_path, 'w') as f:
             json.dump(config, f)
     
-    def save_button_locations(self):
-        """Save button locations (convenience method)"""
-        self.save_settings()
-    
-    def save_automation_settings(self):
-        """Save automation settings (convenience method)"""
+    def save_button_location(self):
+        """Save button location (convenience method)"""
         self.save_settings()
     
     def safe_execute_vscode(self, command):
@@ -317,11 +300,6 @@ class VSCodeAutomation(ttk.LabelFrame):
                 )
             )
             
-            # Try to automate approval if needed
-            if status == 'Success':
-                time.sleep(0.5)  # Wait for VS Code to show dialog
-                self.automate_vscode_approval()
-            
         except Exception as e:
             error_msg = str(e)
             logging.error(f"VS Code command failed: {command} - {error_msg}")
@@ -335,43 +313,6 @@ class VSCodeAutomation(ttk.LabelFrame):
         
         self.vscode_cmd_entry.delete(0, tk.END)
         self.safe_execute_vscode(command)
-    
-    def automate_vscode_approval(self):
-        """Automate VS Code command approval"""
-        try:
-            # Verify security checks first
-            if not self.security_checks.verify_checks():
-                return False
-            
-            # Take screenshot to check for dialogs
-            screenshot = pyautogui.screenshot()
-            
-            # Check each button type
-            for button_type in ['save', 'run', 'approve']:
-                # Skip if automation not enabled
-                if not self.automation_enabled[button_type].get():
-                    continue
-                    
-                # Skip if location not set
-                if not self.button_locations[button_type]:
-                    continue
-                
-                # Get button position
-                pos = self.button_locations[button_type]
-                
-                # Check if button is present
-                color = screenshot.getpixel((pos.x, pos.y))
-                if self.is_button_color(color):
-                    pyautogui.click(pos.x, pos.y)
-                    logging.info(f"Clicked {button_type} button at {pos.x}, {pos.y}")
-                    return True
-            
-            logging.info("No enabled dialogs detected")
-            return False
-                
-        except Exception as e:
-            logging.error(f"Error automating VS Code approval: {e}")
-            return False
     
     def is_button_color(self, color):
         """Check if color matches a button"""
