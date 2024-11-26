@@ -11,6 +11,10 @@ class TestDialog:
         self.root.title("Test Dialog")
         self.root.configure(bg='#1e1e1e')  # VS Code dark theme background
         
+        # State
+        self.running = True
+        self.testing = False
+        
         # Create main frame
         main_frame = tk.Frame(self.root, bg='#1e1e1e')
         main_frame.pack(padx=20, pady=20)
@@ -65,17 +69,19 @@ class TestDialog:
         test_frame = tk.Frame(main_frame, bg='#1e1e1e')
         test_frame.pack(fill='x')
         
-        # Create test button
-        self.test_btn = tk.Button(
+        # Create test toggle
+        self.test_var = tk.BooleanVar(value=False)
+        self.test_toggle = tk.Checkbutton(
             test_frame,
-            text="Test Color Detection",
-            bg='#252526',  # VS Code button grey
+            text="Enable Color Detection",
+            variable=self.test_var,
+            command=self.toggle_testing,
             fg='white',
-            relief='flat',
-            font=('Arial', 12),
-            command=self.test_color_detection
+            bg='#1e1e1e',
+            selectcolor='#0e7ad3',
+            font=('Arial', 12)
         )
-        self.test_btn.pack(pady=10)
+        self.test_toggle.pack(pady=10)
         
         # Create test result label
         self.test_label = tk.Label(
@@ -96,9 +102,12 @@ class TestDialog:
         self.root.geometry(f'+{x}+{y}')
         
         # Start button cycle in a separate thread
-        self.running = True
         self.cycle_thread = threading.Thread(target=self.cycle_buttons, daemon=True)
         self.cycle_thread.start()
+        
+        # Start test thread
+        self.test_thread = threading.Thread(target=self.test_color_detection, daemon=True)
+        self.test_thread.start()
         
         # Handle window close
         self.root.protocol("WM_DELETE_WINDOW", self.on_close)
@@ -117,30 +126,51 @@ class TestDialog:
         self.save_color('cancel', color)
         self.info_label.config(text=f"Cancel color captured: RGB{color}")
     
+    def toggle_testing(self):
+        """Toggle color detection testing"""
+        self.testing = self.test_var.get()
+        if not self.testing:
+            self.test_label.config(text="")
+    
     def test_color_detection(self):
         """Test color detection at current mouse position"""
-        pos = pyautogui.position()
-        color = pyautogui.screenshot().getpixel((pos.x, pos.y))
-        
-        # Load saved colors
-        config_path = os.path.join(os.getcwd(), '.cline', 'vscode_config.json')
-        if os.path.exists(config_path):
-            with open(config_path) as f:
-                config = json.load(f)
-                if 'button_colors' in config:
-                    proceed_color = tuple(config['button_colors']['proceed'])
-                    cancel_color = tuple(config['button_colors']['cancel'])
+        while self.running:
+            if self.testing:
+                try:
+                    pos = pyautogui.position()
+                    color = pyautogui.screenshot().getpixel((pos.x, pos.y))
                     
-                    # Check color matches
-                    if self.colors_match(color, proceed_color):
-                        self.test_label.config(text=f"Detected proceed button: RGB{color}")
-                    elif self.colors_match(color, cancel_color):
-                        self.test_label.config(text=f"Detected cancel button: RGB{color}")
+                    # Load saved colors
+                    config_path = os.path.join(os.getcwd(), '.cline', 'vscode_config.json')
+                    if os.path.exists(config_path):
+                        with open(config_path) as f:
+                            config = json.load(f)
+                            if 'button_colors' in config:
+                                proceed_color = tuple(config['button_colors']['proceed'])
+                                cancel_color = tuple(config['button_colors']['cancel'])
+                                
+                                # Check color matches
+                                if self.colors_match(color, proceed_color):
+                                    self.test_label.config(
+                                        text=f"Detected proceed button: RGB{color}",
+                                        fg='#0e7ad3'  # Blue for proceed
+                                    )
+                                elif self.colors_match(color, cancel_color):
+                                    self.test_label.config(
+                                        text=f"Detected cancel button: RGB{color}",
+                                        fg='#3c3c3c'  # Grey for cancel
+                                    )
+                                else:
+                                    self.test_label.config(
+                                        text=f"No button detected: RGB{color}",
+                                        fg='white'
+                                    )
                     else:
-                        self.test_label.config(text=f"No button detected: RGB{color}")
-                    return
-        
-        self.test_label.config(text="No color config found")
+                        self.test_label.config(text="No color config found")
+                except:
+                    pass
+            
+            time.sleep(0.1)  # Small delay between checks
     
     def colors_match(self, color1, color2, tolerance=20):
         """Check if colors match within tolerance"""
