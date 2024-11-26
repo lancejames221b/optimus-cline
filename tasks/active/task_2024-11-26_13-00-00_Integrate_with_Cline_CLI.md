@@ -17,39 +17,47 @@
 - File search with context lines
 - Browser control with screenshots
 
-3. Testing
+3. System Integration
+- Monitor-executor connection
+- Event-based communication
+- Tool request handling
+- Response propagation
+- Error handling
+
+4. Testing
 - Extension detection tests
 - Tool request handling tests
 - Safety analysis tests
 - Event system tests
 - Tool execution tests
 - Browser control tests
+- System integration tests
 
 ### In Progress
-1. System Integration
-- [ ] Connect monitor to executor
-- [ ] Add approval flow
-- [ ] Handle responses
-- [ ] Add logging
-
-2. Error Recovery
+1. Error Recovery
 - [ ] Handle extension errors
 - [ ] Handle tool errors
 - [ ] Handle browser errors
 - [ ] Add recovery strategies
 
-### Next Steps
-1. Integration Flow
-- [ ] Monitor extension output
-- [ ] Parse tool requests
-- [ ] Execute tools safely
-- [ ] Return results
+2. Performance
+- [ ] Optimize browser control
+- [ ] Improve event handling
+- [ ] Add caching
+- [ ] Reduce latency
 
-2. Error Handling
+### Next Steps
+1. Error Handling
 - [ ] Add error recovery
 - [ ] Improve logging
 - [ ] Add retries
 - [ ] Handle cleanup
+
+2. Optimization
+- [ ] Profile performance
+- [ ] Identify bottlenecks
+- [ ] Implement caching
+- [ ] Optimize flows
 
 ## Implementation Details
 
@@ -59,13 +67,19 @@
 - ExtensionMonitor: Monitors extension events
 - ToolExecutor: Executes tool requests
 - BrowserControl: Handles browser actions
+- SystemIntegration: Connects all components
 
 2. Tool Flow:
 ```
-Extension -> Monitor -> Parser -> Safety Check -> Executor -> Response
+Extension -> Monitor -> System -> Executor -> Response
 ```
 
-3. Safety Rules:
+3. Event Flow:
+```
+Tool Request -> Safety Check -> Execution -> Response -> Event
+```
+
+4. Safety Rules:
 - Block dangerous commands (rm, sudo)
 - Validate file paths (no ../ or /)
 - Safe defaults for unknown tools
@@ -99,4 +113,6 @@ Extension -> Monitor -> Parser -> Safety Check -> Executor -> Response
 - Safety first approach with strict rules
 - Tool execution working with comprehensive tests
 - Browser control working with screenshots
+- System integration working with event flow
 - Error handling needs improvement
+- Performance optimization pending
