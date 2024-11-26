@@ -2,102 +2,96 @@
 
 ## Progress Update
 
-### Completed
-1. Core Integration ✓
+### Completed ✓
+1. Core Integration
 - VSCode extension detection
-- Tool request handling
+- Tool request parsing
 - Safety analysis
 - History management
+- Event system
 
-2. Safety Features ✓
-- Block dangerous commands (rm, sudo)
-- Validate file paths (no ../ or /)
-- Safe defaults for unknown tools
-- History tracking for approvals
-
-3. Testing ✓
+2. Testing
 - Extension detection tests
 - Tool request handling tests
-- History management tests
 - Safety analysis tests
+- Event system tests
+- Log monitoring tests
+
+3. Documentation
+- Architecture overview
+- Safety rules
+- Testing strategy
+- Integration points
 
 ### In Progress
-1. VSCode Communication
-- [ ] Monitor extension output
-- [ ] Parse tool requests
-- [ ] Send approvals
-- [ ] Handle responses
-
-2. Tool Integration
+1. Tool Execution
 - [ ] Command execution
 - [ ] File operations
 - [ ] Browser control
 - [ ] System operations
 
-### Next Steps
-1. Extension Monitoring
-- [ ] Watch extension process
-- [ ] Parse extension output
-- [ ] Handle tool requests
-- [ ] Send responses
-
-2. Tool Execution
-- [ ] Execute approved commands
-- [ ] Handle file operations
-- [ ] Control browser actions
-- [ ] Manage system tasks
-
-3. Error Handling
-- [ ] Extension errors
-- [ ] Tool execution errors
-- [ ] System errors
+2. Error Handling
+- [ ] Process monitoring
 - [ ] Recovery strategies
+- [ ] Error reporting
+- [ ] Logging improvements
+
+### Next Steps
+1. Tool Integration
+- [ ] Implement command executor
+- [ ] Add file operation handlers
+- [ ] Set up browser control
+- [ ] Add system operation handlers
+
+2. Testing
+- [ ] Live tool execution tests
+- [ ] Error handling tests
+- [ ] Recovery tests
+- [ ] Performance tests
 
 ## Implementation Details
 
-### Tool Request Format
-```xml
-<tool_name>
-<param1>value1</param1>
-<param2>value2</param2>
-</tool_name>
+### Architecture
+1. Components:
+- VSCodeIntegration: Core integration with VSCode
+- ExtensionMonitor: Monitors extension events
+- ToolRequest: Represents tool use requests
+- Event System: Handles tool events
+
+2. Safety Rules:
+- Block dangerous commands (rm, sudo)
+- Validate file paths (no ../ or /)
+- Safe defaults for unknown tools
+- History tracking for approvals
+
+3. Event Flow:
 ```
-
-### Safety Rules
-1. Blocked Commands:
-- rm, sudo, mv
-- Pipe operators (|)
-- Redirections (>, >>)
-
-2. File Paths:
-- No parent directory (..)
-- No absolute paths (/)
-- Within project only
-
-3. Auto-Approval:
-- Safe commands only
-- Valid paths
-- Known patterns
+Extension Output -> Monitor -> Parser -> Safety Check -> Handler -> Response
+```
 
 ### Testing Strategy
 1. Unit Tests:
 - Extension detection
-- Tool request handling
+- Tool request parsing
 - Safety analysis
 - History management
 
 2. Integration Tests:
-- Extension communication
+- Event monitoring
 - Tool execution
 - Error handling
+- Recovery strategies
 
 3. System Tests:
 - End-to-end workflows
-- Real tool usage
 - Performance testing
+- Error scenarios
+- Recovery testing
 
 ## Notes
 - Extension found at ~/.vscode/extensions/saoudrizwan.claude-dev-2.1.6.backup
 - Uses XML format for tool requests
 - Requires approval for each tool use
 - Maintains history of approvals
+- Event-based architecture for flexibility
+- Safety first approach with strict rules
