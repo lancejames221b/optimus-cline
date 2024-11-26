@@ -1,10 +1,11 @@
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import ttk, messagebox, scrolledtext
 import subprocess
 import logging
 import pyautogui
 import time
 import os
+from datetime import datetime
 
 class VSCodeAutomation(ttk.LabelFrame):
     def __init__(self, parent, security_checks):
