@@ -10,6 +10,13 @@ import threading
 from datetime import datetime
 
 class VSCodeAutomation(ttk.LabelFrame):
+    # VS Code commands
+    VSCODE_COMMANDS = {
+        'accept_change': 'git.acceptChange',
+        'stage_change': 'git.stage',
+        'revert_change': 'git.revertChange'
+    }
+    
     def __init__(self, parent, security_checks):
         super().__init__(parent, text="VS Code Automation")
         self.security_checks = security_checks
