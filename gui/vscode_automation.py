@@ -20,6 +20,7 @@ class VSCodeAutomation(ttk.LabelFrame):
         self.automation_enabled = tk.BooleanVar(value=False)
         self.monitoring = False
         self.monitor_thread = None
+        self.last_pixel = None
         
         # VS Code commands
         self.VSCODE_COMMANDS = {
@@ -90,6 +91,10 @@ class VSCodeAutomation(ttk.LabelFrame):
             command=self.toggle_automation
         ).pack(side='left')
         
+        # Debug info
+        self.debug_label = ttk.Label(toggle_frame, text="")
+        self.debug_label.pack(side='left', padx=5)
+        
         # Instructions
         instructions = ttk.Label(
             setup_frame,
@@ -142,6 +147,11 @@ class VSCodeAutomation(ttk.LabelFrame):
                     self.button_location = current_pos
                     self.save_button_location()
                     self.location_label.config(text=f"Set: {current_pos.x}, {current_pos.y}")
+                    
+                    # Get initial pixel color
+                    screenshot = pyautogui.screenshot()
+                    self.last_pixel = screenshot.getpixel((current_pos.x, current_pos.y))
+                    
                     logging.info(f"Captured button location: {current_pos.x}, {current_pos.y}")
                     return True
                 last_pos = current_pos
@@ -182,12 +192,24 @@ class VSCodeAutomation(ttk.LabelFrame):
                 # Take screenshot
                 screenshot = pyautogui.screenshot()
                 
-                # Check button location
-                color = screenshot.getpixel((self.button_location.x, self.button_location.y))
-                if self.is_button_color(color):
+                # Get current pixel color
+                current_pixel = screenshot.getpixel((self.button_location.x, self.button_location.y))
+                
+                # Check if pixel changed
+                if current_pixel != self.last_pixel:
+                    self.debug_label.config(text=f"Change detected: {current_pixel}")
+                    
+                    # Click button
                     pyautogui.click(self.button_location.x, self.button_location.y)
                     logging.info(f"Auto-clicked button at {self.button_location.x}, {self.button_location.y}")
-                    time.sleep(0.5)  # Wait before checking again
+                    
+                    # Update last pixel
+                    self.last_pixel = current_pixel
+                    
+                    # Wait before checking again
+                    time.sleep(0.5)
+                else:
+                    self.debug_label.config(text="No change")
                 
                 time.sleep(0.1)  # Small delay between checks
                 
@@ -216,6 +238,10 @@ class VSCodeAutomation(ttk.LabelFrame):
                         x, y = config['button_location']
                         self.button_location = pyautogui.Point(x, y)
                         self.location_label.config(text=f"Set: {x}, {y}")
+                        
+                        # Get initial pixel color
+                        screenshot = pyautogui.screenshot()
+                        self.last_pixel = screenshot.getpixel((x, y))
                     
                     # Load automation setting
                     if 'automation_enabled' in config:
@@ -313,17 +339,3 @@ class VSCodeAutomation(ttk.LabelFrame):
         
         self.vscode_cmd_entry.delete(0, tk.END)
         self.safe_execute_vscode(command)
-    
-    def is_button_color(self, color):
-        """Check if color matches a button"""
-        # Convert color to HSV for better matching
-        r, g, b = color
-        
-        # Check if color is close to button colors
-        # This needs tuning based on your VS Code theme
-        return (
-            # Light theme buttons
-            (r > 200 and g > 200 and b > 200) or
-            # Dark theme buttons
-            (r < 100 and g < 100 and b < 100)
-        )
