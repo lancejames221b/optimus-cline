@@ -18,6 +18,13 @@ from .ai_models import (
     ModelSelector
 )
 from .ai_model_manager import AIModelManagerGUI
+from .search_engine import (
+    SearchEngine,
+    SearchModel,
+    SearchResult,
+    SearchManager
+)
+from .search_manager import SearchManagerGUI
 from .utils import setup_logging, make_window_front, bind_window_events
 
 __all__ = [
@@ -42,6 +49,11 @@ __all__ = [
     'CostTracker',
     'ModelSelector',
     'AIModelManagerGUI',
+    'SearchEngine',
+    'SearchModel',
+    'SearchResult',
+    'SearchManager',
+    'SearchManagerGUI',
     'setup_logging',
     'make_window_front',
     'bind_window_events'
