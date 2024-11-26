@@ -30,8 +30,10 @@ class ClineApp:
         notebook = ttk.Notebook(main_frame)
         notebook.pack(expand=True, fill='both')
         
-        # Create components
+        # Create security checks first since other components need it
         self.security_checks = SecurityChecks(notebook)
+        
+        # Create components
         self.credential_manager = CredentialManagement(notebook)
         self.task_management = TaskManagement(notebook, self.security_checks)
         self.command_history = CommandHistory(notebook, self.credential_manager)
