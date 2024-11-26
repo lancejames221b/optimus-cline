@@ -4,7 +4,7 @@ import logging
 from typing import Optional, List, Dict, Any
 from dataclasses import dataclass
 from datetime import datetime
-from openai import OpenAI
+from openai import AsyncOpenAI
 
 @dataclass
 class SearchResult:
@@ -21,7 +21,7 @@ class PerplexitySearch:
     
     def __init__(self):
         self.api_key = self._load_api_key()
-        self.client = OpenAI(
+        self.client = AsyncOpenAI(
             api_key=self.api_key,
             base_url="https://api.perplexity.ai"
         )
@@ -172,27 +172,3 @@ class ResearchManager:
     def clear_history(self):
         """Clear search history"""
         self.history.clear()
-
-# Example usage:
-"""
-async def main():
-    research = ResearchManager()
-    
-    # Research Mac automation
-    result = await research.research(
-        "How to automate Chrome browser actions on Mac OS?",
-        context="Building a Mac automation system that needs to control Chrome"
-    )
-    print(result.response)
-    
-    # Research with app-specific context
-    result = await research.research(
-        "Best practices for Gmail automation",
-        context="Need to automate email management in Gmail on Mac"
-    )
-    print(result.response)
-
-if __name__ == '__main__':
-    import asyncio
-    asyncio.run(main())
-"""

@@ -1,8 +1,9 @@
 import os
 import logging
+import subprocess
 import pyautogui
 import pytesseract
-import numpy as np
+import applescript
 from PIL import Image, ImageGrab
 from typing import Optional, Tuple, List, Dict, Any
 from dataclasses import dataclass
@@ -28,6 +29,7 @@ class UIElement:
     size: Tuple[int, int]
     confidence: float
     image: Optional[Image.Image] = None
+    accessibility_description: Optional[str] = None
 
 class ScreenAnalyzer:
     """Analyzes screen content and finds UI elements"""
@@ -44,6 +46,24 @@ class ScreenAnalyzer:
         
         # Cache for recent analysis
         self.last_analysis: Optional[Dict[str, Any]] = None
+        
+        # Check accessibility permissions
+        self._check_permissions()
+    
+    def _check_permissions(self):
+        """Check and request necessary permissions"""
+        try:
+            script = '''
+            tell application "System Events"
+                set UI_enabled to UI elements enabled
+            end tell
+            '''
+            applescript.AppleScript(script).run()
+        except Exception as e:
+            self.logger.warning(
+                f"Accessibility permissions not granted: {e}. "
+                "Please enable in System Settings > Privacy & Security > Accessibility"
+            )
     
     def capture_screen(self, region: Optional[Tuple[int, int, int, int]] = None) -> Image.Image:
         """Capture screen or region"""
@@ -117,6 +137,38 @@ class ScreenAnalyzer:
                 confidence=elem['confidence']
             ))
         
+        # Use AppleScript to get accessibility descriptions
+        try:
+            script = '''
+            tell application "System Events"
+                set frontApp to first application process whose frontmost is true
+                set elements to entire contents of frontApp
+                set output to {}
+                repeat with elem in elements
+                    try
+                        set desc to description of elem
+                        set pos to position of elem
+                        set sz to size of elem
+                        copy {desc, pos, sz} to end of output
+                    end try
+                end repeat
+                return output
+            end tell
+            '''
+            result = applescript.AppleScript(script).run()
+            if result:
+                for desc, pos, size in result:
+                    elements.append(UIElement(
+                        type=ElementType.OTHER,
+                        text=None,
+                        location=pos,
+                        size=size,
+                        confidence=1.0,
+                        accessibility_description=desc
+                    ))
+        except Exception as e:
+            self.logger.error(f"AppleScript error: {e}")
+        
         # Cache analysis
         self.last_analysis = {
             'timestamp': 'now',
@@ -135,11 +187,16 @@ class ScreenAnalyzer:
                     return element
                 elif text.lower() == element.text.lower():
                     return element
+            elif element.accessibility_description:
+                if partial and text.lower() in element.accessibility_description.lower():
+                    return element
+                elif text.lower() == element.accessibility_description.lower():
+                    return element
         
         return None
 
 class ComputerController:
-    """Controls computer through mouse and keyboard"""
+    """Controls computer through mouse, keyboard, and AppleScript"""
     
     def __init__(self):
         self.logger = logging.getLogger(__name__)
@@ -149,9 +206,17 @@ class ComputerController:
         pyautogui.FAILSAFE = True
         pyautogui.PAUSE = 0.5  # Add small delay between actions
     
+    def get_screen_size(self) -> Tuple[int, int]:
+        """Get screen size"""
+        return pyautogui.size()
+    
     def move_to(self, x: int, y: int, duration: float = 0.5):
         """Move mouse to location"""
         try:
+            # Ensure coordinates are within screen bounds
+            size = self.get_screen_size()
+            x = max(0, min(x, size[0]-1))
+            y = max(0, min(y, size[1]-1))
             pyautogui.moveTo(x, y, duration=duration)
         except Exception as e:
             self.logger.error(f"Mouse move failed: {e}")
@@ -162,9 +227,8 @@ class ComputerController:
         """Click at location or current position"""
         try:
             if x is not None and y is not None:
-                pyautogui.click(x, y, duration=duration)
-            else:
-                pyautogui.click()
+                self.move_to(x, y, duration)
+            pyautogui.click()
         except Exception as e:
             self.logger.error(f"Click failed: {e}")
             raise
@@ -201,8 +265,7 @@ class ComputerController:
             y = element.location[1] + element.size[1] // 2
             
             # Move and click
-            self.move_to(x, y, duration)
-            self.click()
+            self.click(x, y, duration)
         except Exception as e:
             self.logger.error(f"Element click failed: {e}")
             raise
@@ -215,22 +278,60 @@ class ComputerController:
             self.click_element(element, duration)
             return True
         return False
-
-# Example usage:
-"""
-def main():
-    controller = ComputerController()
     
-    # Find and click a button
-    if controller.click_text("Submit", partial=True):
-        print("Clicked Submit button")
+    def activate_app(self, app_name: str):
+        """Activate application"""
+        try:
+            script = f'''
+            tell application "{app_name}"
+                activate
+            end tell
+            '''
+            applescript.AppleScript(script).run()
+        except Exception as e:
+            self.logger.error(f"App activation failed: {e}")
+            raise
     
-    # Type some text
-    controller.type_text("Hello, World!")
+    def chrome_command(self, command: str):
+        """Run Chrome command via AppleScript"""
+        try:
+            script = f'''
+            tell application "Google Chrome"
+                activate
+                delay 0.5
+                {command}
+            end tell
+            '''
+            applescript.AppleScript(script).run()
+        except Exception as e:
+            self.logger.error(f"Chrome command failed: {e}")
+            raise
     
-    # Use keyboard shortcut
-    controller.hotkey('command', 'c')  # Copy
+    def vscode_command(self, command: str):
+        """Run VSCode command via AppleScript"""
+        try:
+            script = f'''
+            tell application "Visual Studio Code"
+                activate
+                delay 0.5
+                {command}
+            end tell
+            '''
+            applescript.AppleScript(script).run()
+        except Exception as e:
+            self.logger.error(f"VSCode command failed: {e}")
+            raise
     
-if __name__ == '__main__':
-    main()
-"""
+    def get_running_apps(self) -> List[str]:
+        """Get list of running applications"""
+        try:
+            script = '''
+            tell application "System Events"
+                get name of every process where background only is false
+            end tell
+            '''
+            result = applescript.AppleScript(script).run()
+            return result if result else []
+        except Exception as e:
+            self.logger.error(f"Failed to get running apps: {e}")
+            raise
