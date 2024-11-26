@@ -50,6 +50,9 @@ class BrowserControl:
         
         # Event loop
         self.loop = asyncio.get_event_loop()
+        
+        # Cleanup flag
+        self._cleanup_in_progress = False
     
     async def _setup_browser(self):
         """Set up browser if not running"""
@@ -75,6 +78,9 @@ class BrowserControl:
                     'width': self.width,
                     'height': self.height
                 })
+                
+                # Set navigation timeout
+                await self.page.setDefaultNavigationTimeout(60000)
                 
                 # Set user agent
                 await self.page.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36')
@@ -245,14 +251,28 @@ class BrowserControl:
     
     async def cleanup(self):
         """Clean up resources"""
+        if self._cleanup_in_progress:
+            return
+            
+        self._cleanup_in_progress = True
         try:
             if self.browser:
-                pages = await self.browser.pages()
-                for page in pages:
-                    await page.close()
-                await self.browser.close()
+                try:
+                    pages = await self.browser.pages()
+                    for page in pages:
+                        if not page.isClosed():
+                            await page.close()
+                except:
+                    pass
+                    
+                try:
+                    if not self.browser.process.returncode:
+                        await self.browser.close()
+                except:
+                    pass
         except Exception as e:
             self.logger.error(f"Error cleaning up browser: {e}")
         finally:
             self.browser = None
             self.page = None
+            self._cleanup_in_progress = False

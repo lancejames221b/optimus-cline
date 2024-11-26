@@ -57,6 +57,17 @@ class RecoveryActions:
             if not self.browser.browser:
                 raise RuntimeError("Failed to restart browser")
             
+            # Navigate to URL if provided
+            url = context.context.get('url')
+            if url:
+                await self.browser.page.goto(
+                    url,
+                    {
+                        'waitUntil': ['load', 'domcontentloaded', 'networkidle0'],
+                        'timeout': 60000
+                    }
+                )
+            
             self.logger.info("Browser restarted successfully")
             return True
             
@@ -72,32 +83,40 @@ class RecoveryActions:
             # Get tool info
             tool = context.context.get('tool')
             if not tool:
+                tool = context.context.get('request', {}).get('tool')
+            if not tool:
                 raise ValueError("No tool specified")
             
             # Clean up resources
             await self._cleanup_tool_resources(tool)
             
+            # Get retry params
+            params = context.context.get('params', {})
+            if not params:
+                params = context.context.get('request', {}).get('params', {})
+            
             # Apply timeout if specified
             timeout = context.context.get('timeout')
-            if timeout:
-                # Store original timeout
-                original_timeout = None
-                if hasattr(self.browser.page, '_timeout'):
-                    original_timeout = self.browser.page._timeout
-                
-                # Set new timeout
-                if hasattr(self.browser.page, 'setDefaultTimeout'):
-                    await self.browser.page.setDefaultTimeout(timeout)
+            if timeout and hasattr(self.browser, 'page'):
+                await self.browser.page.setDefaultNavigationTimeout(timeout)
             
             # Wait before retry
             await asyncio.sleep(context.attempt)
             
-            # TODO: Implement actual tool retry
-            # This will need to integrate with ToolExecutor
-            
-            # Restore original timeout
-            if timeout and original_timeout and hasattr(self.browser.page, 'setDefaultTimeout'):
-                await self.browser.page.setDefaultTimeout(original_timeout)
+            # Execute retry
+            if tool == 'browser_action':
+                action = params.get('action')
+                if action == 'launch':
+                    await self.restart_browser(context)
+                elif action == 'click':
+                    await self.browser.page.mouse.click(
+                        *map(int, params['coordinate'].split(','))
+                    )
+                elif action in ['scroll_down', 'scroll_up']:
+                    direction = 1 if action == 'scroll_down' else -1
+                    await self.browser.page.evaluate(
+                        f'window.scrollBy(0, {direction} * window.innerHeight)'
+                    )
             
             self.logger.info("Tool retry completed")
             return True
@@ -105,6 +124,10 @@ class RecoveryActions:
         except Exception as e:
             self.logger.error(f"Error retrying tool: {e}")
             return False
+        finally:
+            # Restore timeout
+            if timeout and hasattr(self.browser, 'page'):
+                await self.browser.page.setDefaultNavigationTimeout(30000)
     
     async def restart_extension(self, context: RecoveryContext) -> bool:
         """Restart VSCode extension"""
