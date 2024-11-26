@@ -8,6 +8,8 @@ import os
 import json
 import threading
 from datetime import datetime
+import pytesseract
+from PIL import Image
 
 class VSCodeAutomation(ttk.LabelFrame):
     def __init__(self, parent, security_checks):
@@ -21,6 +23,8 @@ class VSCodeAutomation(ttk.LabelFrame):
         self.monitoring = False
         self.monitor_thread = None
         self.last_pixel = None
+        self.last_click_time = 0
+        self.CLICK_COOLDOWN = 2.0  # Seconds between clicks
         
         # VS Code commands
         self.VSCODE_COMMANDS = {
@@ -189,25 +193,45 @@ class VSCodeAutomation(ttk.LabelFrame):
                 if not self.button_location:
                     break
                 
-                # Take screenshot
-                screenshot = pyautogui.screenshot()
+                # Take screenshot of button area
+                screenshot = pyautogui.screenshot(region=(
+                    self.button_location.x - 50,  # Capture area around button
+                    self.button_location.y - 10,
+                    100,
+                    20
+                ))
+                
+                # Check for "Cancel" text
+                text = pytesseract.image_to_string(screenshot).lower()
+                if 'cancel' in text:
+                    self.debug_label.config(text="Cancel button detected - ignoring")
+                    time.sleep(0.1)
+                    continue
                 
                 # Get current pixel color
-                current_pixel = screenshot.getpixel((self.button_location.x, self.button_location.y))
+                current_pixel = screenshot.getpixel((50, 10))  # Center of captured area
                 
                 # Check if pixel changed
                 if current_pixel != self.last_pixel:
                     self.debug_label.config(text=f"Change detected: {current_pixel}")
                     
-                    # Click button
-                    pyautogui.click(self.button_location.x, self.button_location.y)
-                    logging.info(f"Auto-clicked button at {self.button_location.x}, {self.button_location.y}")
-                    
-                    # Update last pixel
-                    self.last_pixel = current_pixel
-                    
-                    # Wait before checking again
-                    time.sleep(0.5)
+                    # Check cooldown
+                    current_time = time.time()
+                    if current_time - self.last_click_time >= self.CLICK_COOLDOWN:
+                        # Click button
+                        pyautogui.click(self.button_location.x, self.button_location.y)
+                        logging.info(f"Auto-clicked button at {self.button_location.x}, {self.button_location.y}")
+                        
+                        # Update last click time
+                        self.last_click_time = current_time
+                        
+                        # Update last pixel
+                        self.last_pixel = current_pixel
+                        
+                        # Wait before checking again
+                        time.sleep(0.5)
+                    else:
+                        self.debug_label.config(text="Waiting for cooldown")
                 else:
                     self.debug_label.config(text="No change")
                 
