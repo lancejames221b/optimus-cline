@@ -33,7 +33,7 @@ class ClineApp:
         # Create components
         self.security_checks = SecurityChecks(notebook)
         self.credential_manager = CredentialManagement(notebook)
-        self.task_management = TaskManagement(notebook)
+        self.task_management = TaskManagement(notebook, self.security_checks)
         self.command_history = CommandHistory(notebook, self.credential_manager)
         self.vscode_automation = VSCodeAutomation(notebook, self.security_checks)
         
