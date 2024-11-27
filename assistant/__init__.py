@@ -1,28 +1,24 @@
 """
-Mac Assistant - AI-powered workflow automation for macOS
+Mac Assistant Package
+------------------
+
+AI-powered automation assistant for macOS.
 """
 
-from .search import ResearchManager, SearchResult
-from .computer import (
-    ComputerController,
-    ScreenAnalyzer,
-    UIElement,
-    ElementType
-)
-from .agent import MacAssistant, Task
 from .chat import AssistantChat
+from .agent import MacAssistant
+from .browser_control import BrowserControl
+from .computer import ComputerController
+from .search import ResearchManager
 
-__version__ = '0.1.0'
+__version__ = '1.0.0'
 __author__ = 'Lance James'
+__email__ = 'lance@221b.sh'
 
 __all__ = [
-    'ResearchManager',
-    'SearchResult',
-    'ComputerController',
-    'ScreenAnalyzer',
-    'UIElement',
-    'ElementType',
+    'AssistantChat',
     'MacAssistant',
-    'Task',
-    'AssistantChat'
+    'BrowserControl',
+    'ComputerController',
+    'ResearchManager'
 ]

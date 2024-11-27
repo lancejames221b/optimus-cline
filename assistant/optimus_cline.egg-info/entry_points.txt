@@ -1,0 +1,2 @@
+[console_scripts]
+optimus-cline = assistant.__main__:main

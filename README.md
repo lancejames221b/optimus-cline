@@ -1,149 +1,134 @@
-# Mac Assistant
+# Optimus Cline
 
-An AI-powered assistant that learns and automates your daily Mac OS workflow. It uses screen analysis and computer control to perform tasks across applications, with intelligent search capabilities powered by Perplexity AI.
+An AI system that can use a computer like a human, handling both development tasks and routine daily activities.
 
 ## Features
 
-- **Natural Language Interface**: Describe tasks in plain English
-- **Screen Analysis**: Understands what's on your screen
-- **Application Control**: Works with Chrome, VSCode, Slack, Gmail, etc.
-- **Intelligent Search**: Uses Perplexity AI for research and context
-- **Learning System**: Adapts to your workflow patterns
-- **Task History**: Tracks and learns from past operations
+- Research-first approach using Perplexity AI
+- Cost-effective reasoning with GPT-o1-mini
+- Computer control with Claude (beta)
+- Knowledge caching and pattern learning
+- Task type detection and optimization
+- Safety measures and monitoring
 
-## Requirements
+## File Organization
 
-- macOS
-- Python 3.8+
-- Tesseract OCR (`brew install tesseract`)
-- API Keys:
-  - Perplexity API key (for intelligent search)
+### Core Components
+- `assistant/computer_workflow.py`: Main workflow manager
+- `assistant/model_router.py`: Model selection and routing
+- `assistant/search.py`: Perplexity integration
+- `assistant/openai_manager.py`: OpenAI integration
+- `assistant/claude_manager.py`: Claude integration
+
+### Documentation
+- `docs/PRD.md`: Product requirements
+- `docs/KNOWLEDGE.md`: Knowledge base
+- `docs/INTEGRATION.md`: Integration guide
+- `docs/QUICKSTART.md`: Quick start guide
+- `docs/COMMANDS.md`: Available commands
+
+### Testing
+- `test_computer_workflow.py`: Main workflow tests
+- `test_search.py`: Search functionality tests
+- `test_research_models.py`: Model research tests
+- `test_claude.py`: Computer control tests
+
+### Tasks
+- `tasks/active/`: Active development tasks
+- `tasks/archive/`: Completed tasks
+- `tasks/templates/`: Task templates
 
 ## Installation
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/lancejames221b/optimus-cline.git
+git clone https://github.com/yourusername/optimus-cline.git
 cd optimus-cline
 ```
 
-2. Create and activate virtual environment:
-```bash
-python -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-```
-
-3. Install dependencies:
+2. Install dependencies:
 ```bash
 pip install -r requirements.txt
 ```
 
-4. Configure API keys:
-Create or edit `/Volumes/SeXternal/keys.txt`:
-```ini
-[AI Models]
-PERPLEXITY_API_KEY=your_key_here
+3. Set up API keys:
+```bash
+cp .env.template .env
+# Edit .env with your API keys
 ```
-
-5. Grant permissions:
-- System Settings > Privacy & Security > Accessibility
-- System Settings > Privacy & Security > Screen Recording
 
 ## Usage
 
-1. Start the assistant:
+1. Start the system:
 ```bash
 python -m assistant
 ```
 
-2. Example tasks:
-```
-task> Open Chrome and search for Python automation
-task> Check my Gmail for new messages
-task> Create a new document in VSCode
-```
-
-3. Available commands:
-- `/help`: Show help message
-- `/history`: Show task history
-- `/clear`: Clear task history
-- `/quit`: Exit assistant
-
-## Components
-
-- `search.py`: Intelligent search using Perplexity API
-- `computer.py`: Screen analysis and computer control
-- `agent.py`: Core assistant logic and task execution
-- `chat.py`: Terminal-based chat interface
-
-## Architecture
-
-1. **Task Analysis**:
-   - Natural language understanding
-   - Task decomposition
-   - Context gathering
-
-2. **Screen Understanding**:
-   - Real-time screen analysis
-   - UI element detection
-   - Text recognition (OCR)
-
-3. **Task Execution**:
-   - Application control
-   - Mouse/keyboard automation
-   - Error handling
-
-4. **Learning System**:
-   - Pattern recognition
-   - Workflow optimization
-   - Error correction
-
-## Development
-
-1. Create new branch:
-```bash
-git checkout -b feature/your-feature
-```
-
 2. Run tests:
 ```bash
-pytest
+python test_computer_workflow.py
 ```
 
-3. Format code:
-```bash
-black .
-```
+## Task Types
 
-4. Run linter:
-```bash
-flake8
-```
+### Development Tasks
+- Writing code
+- Debugging
+- System configuration
+- Testing
 
-## Security
+### System Tasks
+- File organization
+- Application management
+- System maintenance
+- Backup routines
 
-- All operations are local
-- No data collection
-- Permission-based access
-- Secure API handling
-- Activity logging
+### Communication Tasks
+- Email management
+- Slack/Discord interaction
+- Document creation
+- Meeting notes
 
-## Future Enhancements
+### Research Tasks
+- Web searches
+- Documentation reading
+- Learning new tools
+- Staying updated
 
-- Multi-monitor support
-- Custom workflow creation
-- Advanced pattern learning
-- Integration with more apps
-- Automated optimization
+## Model Strategy
+
+### Perplexity AI
+- Used for research and staying up-to-date
+- Real-time information gathering
+- Cost-effective for general queries
+- Provides context and citations
+
+### OpenAI GPT-o1-mini
+- Used for reasoning and decision making
+- Logical reasoning and task planning
+- Pattern recognition
+- Cost-effective compared to larger models
+
+### Claude (Beta)
+- Used for computer control
+- Screen interpretation
+- Cursor and keyboard control
+- Safety measures
 
 ## Contributing
 
 1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Run tests and linting
-5. Submit a pull request
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
 ## License
 
-MIT License - see LICENSE file for details
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Acknowledgments
+
+- OpenAI for GPT models
+- Anthropic for Claude
+- Perplexity for search capabilities

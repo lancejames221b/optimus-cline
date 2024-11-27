@@ -21,8 +21,10 @@ Mac Assistant is a chatbot-based system that learns and automates your daily Mac
 - Terminal command execution
 
 ### 3. AI Integration
-- Perplexity AI for research and context
-- In-app AI tools awareness (e.g., Perplexity desktop)
+- Multi-model approach for different tasks:
+  - OpenAI for structured output and function calling
+  - Claude for computer control and system operations
+  - Perplexity for general search and research
 - Natural language task understanding
 - Context-aware responses
 - Learning from user behavior
@@ -34,35 +36,43 @@ Mac Assistant is a chatbot-based system that learns and automates your daily Mac
 - Time management patterns
 - Communication styles
 
-## Key Features
+## Model Architecture
 
-### 1. Natural Interaction
-- Chat-based interface
-- Natural language task description
-- Context-aware responses
-- Task clarification when needed
-- Progress updates
+### 1. OpenAI Integration
+- Used for structured output and function calling
+- Features:
+  - JSON schema adherence with `response_format`
+  - Function calling in strict mode
+  - Pydantic model integration
+  - Type validation and error handling
+- Best for:
+  - Command parsing
+  - Data extraction
+  - API interactions
+  - Multi-agent coordination
 
-### 2. Screen Understanding
-- Real-time screen analysis
-- UI element detection
-- Text recognition (OCR)
-- State tracking
-- Error detection
+### 2. Claude Integration
+- Used for computer control and system operations
+- Features:
+  - Screen interpretation
+  - Cursor movement and clicking
+  - Text input
+  - Task automation
+- Limitations:
+  - Slower performance on basic actions
+  - Limited scrolling and dragging
+  - Safety concerns with prompt injection
 
-### 3. Task Automation
-- Document editing
-- Email management
-- Web research
-- File organization
-- Communication tasks
-
-### 4. Learning System
-- User behavior analysis
-- Pattern recognition
-- Preference learning
-- Error correction
-- Performance optimization
+### 3. Perplexity Integration
+- Used for general search and research
+- Features:
+  - Online search capabilities
+  - Context-aware responses
+  - Real-time information access
+- Best for:
+  - Information gathering
+  - Research tasks
+  - General queries
 
 ## Technical Architecture
 
@@ -74,11 +84,10 @@ Mac Assistant is a chatbot-based system that learns and automates your daily Mac
 - Task executor
 
 ### 2. AI Integration
-- Perplexity API for search/research
-- OCR for screen text
-- Pattern recognition
-- Decision making
-- Task planning
+- Model router for task distribution
+- Response formatter
+- Error handler
+- Performance monitor
 
 ### 3. System Integration
 - macOS accessibility features
@@ -93,7 +102,7 @@ Mac Assistant is a chatbot-based system that learns and automates your daily Mac
 - Chat interface
 - Basic screen analysis
 - Simple computer control
-- Perplexity integration
+- Multi-model integration
 - Basic task execution
 
 ### Phase 2: Application Integration
@@ -130,7 +139,7 @@ Mac Assistant is a chatbot-based system that learns and automates your daily Mac
 - Python 3.8+
 - macOS accessibility permissions
 - Application access rights
-- API keys (Perplexity, etc.)
+- API keys (OpenAI, Claude, Perplexity)
 - Screen recording permission
 
 ### User Setup
@@ -146,3 +155,14 @@ Mac Assistant is a chatbot-based system that learns and automates your daily Mac
 - Advanced pattern learning
 - Integration with more apps
 - Automated optimization
+- Voice interaction support
+  - Speech recognition for commands
+  - Voice feedback and responses
+  - Multi-modal interaction (voice + text)
+  - Context-aware voice understanding
+  - Voice profile customization
+- Advanced model capabilities
+  - Improved structured output handling
+  - Better computer control performance
+  - Enhanced safety measures
+  - Real-time model switching based on task

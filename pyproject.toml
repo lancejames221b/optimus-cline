@@ -1,0 +1,50 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "optimus-cline"
+version = "1.0.0"
+authors = [
+    { name="Lance James", email="lance@221b.sh" },
+]
+description = "VSCode extension integration for AI assistance"
+readme = "README.md"
+requires-python = ">=3.9"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Software Development :: Tools",
+]
+dependencies = [
+    "aiohttp>=3.8.0",
+    "python-dotenv>=1.0.0",
+    "pyppeteer>=1.0.0",
+    "psutil>=5.9.0",
+    "openai>=1.0.0",
+    "requests>=2.31.0",
+    "rich>=10.0.0",
+    "prompt_toolkit>=3.0.0",
+    "pyautogui>=0.9.0",
+    "pytesseract>=0.3.0",
+    "applescript>=2021.2.9"
+]
+
+[project.urls]
+"Homepage" = "https://github.com/lancejames221b/optimus-cline"
+"Bug Tracker" = "https://github.com/lancejames221b/optimus-cline/issues"
+"Documentation" = "https://github.com/lancejames221b/optimus-cline/docs"
+
+[project.scripts]
+optimus-cline = "assistant.__main__:main"
+
+[tool.setuptools]
+packages = ["assistant"]

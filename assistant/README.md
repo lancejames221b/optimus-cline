@@ -1,133 +1,135 @@
-# Optimus Cline
+# Cline Assistant
 
-VSCode extension integration for AI assistance with advanced tool execution, error recovery, and performance optimization.
+An AI-powered computer use and task automation system that leverages multiple AI models through OpenRouter and Perplexity.
 
 ## Features
 
-- VSCode extension integration
-- Safe tool execution
-- Browser control with screenshots
-- Error recovery with retries
-- Performance optimization
-- Comprehensive monitoring
-
-## Installation
-
-### From PyPI
-
-```bash
-pip install optimus-cline
-```
-
-### From Source
-
-```bash
-git clone https://github.com/lancejames221b/optimus-cline.git
-cd optimus-cline/assistant
-pip install -e .
-```
+- Natural language computer control
+- Intelligent file operations
+- Application automation
+- Smart search capabilities
+- Cost-optimized AI model selection
+- Comprehensive error recovery
 
 ## Quick Start
 
-1. Install the VSCode extension
-2. Install optimus-cline
-3. Run the assistant:
-
+1. Clone the repository:
 ```bash
-optimus-cline
+git clone https://github.com/lancejames221b/optimus-cline.git
+cd optimus-cline/assistant
+```
+
+2. Install dependencies:
+```bash
+pip install -r requirements.txt
+```
+
+3. Set up environment:
+```bash
+cp .env.template .env
+# Edit .env with your API keys
+```
+
+4. Run the chat interface:
+```bash
+python run_chat.py
 ```
 
 ## Usage
 
-### Basic Usage
+### Commands
 
-```python
-from assistant import ToolExecutor, ToolRequest
+- `!command` - Execute system command
+  ```
+  > !ls
+  > !pwd
+  ```
 
-# Create executor
-executor = ToolExecutor()
+- `?query` - Search for information
+  ```
+  > ?python error handling
+  > ?how to use git
+  ```
 
-# Execute command
-result = await executor.execute(ToolRequest(
-    tool='execute_command',
-    params={'command': 'echo "Hello World"'},
-    timestamp='now'
-))
+- Natural language computer tasks
+  ```
+  > open Chrome
+  > create file test.txt
+  > read file example.py
+  ```
 
-# Check result
-if result.success:
-    print(f"Output: {result.output}")
+### Examples
+
+1. File Operations
+```
+> create new file test.txt
+> write to test.txt Hello World
+> read test.txt
+> list files
 ```
 
-### Browser Control
-
-```python
-# Launch browser
-result = await executor.execute(ToolRequest(
-    tool='browser_action',
-    params={
-        'action': 'launch',
-        'url': 'https://example.com'
-    },
-    timestamp='now'
-))
-
-# Take screenshot
-print(f"Screenshot: {result.output['screenshot']}")
+2. Application Control
+```
+> open Chrome
+> open Visual Studio Code
+> close Chrome
 ```
 
-### Error Recovery
-
-```python
-from assistant import ErrorRecovery
-
-# Create recovery
-recovery = ErrorRecovery()
-
-# Handle error
-result = await recovery.recover(
-    'browser_error',
-    'Navigation timeout',
-    {'url': 'https://example.com'}
-)
-
-if result.success:
-    print(f"Recovery succeeded: {result.action}")
+3. Search
+```
+> ?how to use git rebase
+> ?python async await examples
 ```
 
-### Performance Optimization
-
-```python
-from assistant import PerformanceOptimizer
-
-# Create optimizer
-optimizer = PerformanceOptimizer()
-
-# Batch operations
-for i in range(10):
-    await optimizer.batch_operation('file_write', {
-        'path': f'file_{i}.txt',
-        'content': f'Content {i}'
-    })
+4. System Commands
 ```
+> !ls -la
+> !pwd
+> !python --version
+```
+
+## Components
+
+### 1. AI Integration
+- OpenRouter API for Claude Sonnet
+- Perplexity API for search
+- Model selection optimization
+- Cost tracking and budgeting
+
+### 2. Computer Use
+- File system operations
+- Application interaction
+- Browser automation
+- GUI element detection
+
+### 3. Search
+- Intelligent query processing
+- Context-aware search
+- Result caching
+- Cost optimization
+
+### 4. Error Recovery
+- Automatic error recovery
+- Retry mechanisms
+- Resource cleanup
+- Error history tracking
 
 ## Configuration
 
-Configuration is done through environment variables:
+Configuration is done through environment variables in `.env`:
 
-```bash
-# VSCode extension path
-CLINE_EXTENSION_PATH=~/.vscode/extensions/saoudrizwan.claude-dev-2.1.6.backup
+```ini
+# AI API Keys
+OPENROUTER_API_KEY=your_key_here
+PERPLEXITY_API_KEY=your_key_here
 
-# Browser settings
-CLINE_BROWSER_WIDTH=900
-CLINE_BROWSER_HEIGHT=600
-
-# Performance settings
-CLINE_CACHE_SIZE=1000
-CLINE_BATCH_SIZE=10
-CLINE_BATCH_TIMEOUT=0.1
+# Settings
+DEFAULT_MODEL=claude-sonnet
+SEARCH_MODEL=llama-3.1-sonar-small-128k-online
+MAX_BUDGET_PER_DAY=1.00
 ```
+
+See `.env.template` for all available options.
 
 ## Development
 
@@ -147,9 +149,6 @@ pip install -e ".[docs]"
 # Run all tests
 pytest
 
-# Run specific test
-pytest assistant/test_executor.py
-
 # Run with coverage
 pytest --cov=assistant
 ```
@@ -157,10 +156,16 @@ pytest --cov=assistant
 ### Build Documentation
 
 ```bash
-# Build docs
 cd docs
 make html
 ```
+
+## Security
+
+- All system commands require explicit approval
+- File operations are restricted to working directory
+- Application control is limited to allowed apps
+- Cost limits prevent excessive API usage
 
 ## Contributing
 

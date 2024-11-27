@@ -48,9 +48,6 @@ class BrowserControl:
         # Console logs
         self.logs: List[str] = []
         
-        # Event loop
-        self.loop = asyncio.get_event_loop()
-        
         # Cleanup flag
         self._cleanup_in_progress = False
     
@@ -63,6 +60,7 @@ class BrowserControl:
                     handleSIGINT=False,
                     handleSIGTERM=False,
                     handleSIGHUP=False,
+                    executablePath='/Users/lj/Library/Caches/ms-playwright/chromium-1148/chrome-mac-arm64/Chromium.app/Contents/MacOS/Chromium',
                     args=[
                         f'--window-size={self.width},{self.height}',
                         '--no-sandbox',

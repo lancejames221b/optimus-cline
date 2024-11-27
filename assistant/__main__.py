@@ -1,32 +1,29 @@
-#!/usr/bin/env python3
+"""
+Main entry point for the assistant package.
+"""
+
 import os
 import sys
 import logging
-from .chat import main as chat_main
-
-def setup_logging():
-    """Set up logging configuration"""
-    log_dir = os.path.expanduser('~/.mac-assistant/logs')
-    os.makedirs(log_dir, exist_ok=True)
-    
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        handlers=[
-            logging.FileHandler(
-                os.path.join(log_dir, 'assistant.log')
-            ),
-            logging.StreamHandler(sys.stdout)
-        ]
-    )
-
-def main():
-    """Main entry point"""
-    # Set up logging
-    setup_logging()
-    
-    # Run chat interface
-    chat_main()
+from .chat import main
 
 if __name__ == '__main__':
-    main()
+    # Set up logging
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
+    
+    # Add package root to Python path
+    package_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    if package_root not in sys.path:
+        sys.path.insert(0, package_root)
+    
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("\nShutting down...")
+        sys.exit(0)
+    except Exception as e:
+        logging.error(f"Fatal error: {e}")
+        sys.exit(1)

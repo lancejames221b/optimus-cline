@@ -1,0 +1,24 @@
+System Monitor Report - 2024-11-26 20:40:27.767991
+
+CPU Usage Per Core:
+Core 0: 43.0%
+Core 1: 38.0%
+Core 2: 35.4%
+Core 3: 31.0%
+Core 4: 80.0%
+Core 5: 74.3%
+Core 6: 68.0%
+Core 7: 60.4%
+
+Memory Usage:
+total: 24576 MB
+available: 11482 MB
+percent: 53.3%
+used: 11367 MB
+
+Top Processes by CPU Usage:
+PID: 594 Name: loginwindow CPU: 0.0%
+PID: 937 Name: distnoted CPU: 0.0%
+PID: 978 Name: cfprefsd CPU: 0.0%
+PID: 989 Name: lsd CPU: 0.0%
+PID: 1003 Name: trustd CPU: 0.0%

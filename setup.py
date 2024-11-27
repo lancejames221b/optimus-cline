@@ -2,9 +2,20 @@ import os
 import sys
 from setuptools import setup, find_packages
 
-# Read requirements
-with open('requirements.txt') as f:
-    requirements = [line.strip() for line in f if line.strip() and not line.startswith('#')]
+# Core requirements
+requirements = [
+    'aiohttp>=3.8.0',
+    'python-dotenv>=1.0.0',
+    'pyppeteer>=1.0.0',
+    'psutil>=5.9.0',
+    'openai>=1.0.0',
+    'requests>=2.31.0',
+    'rich>=10.0.0',
+    'prompt_toolkit>=3.0.0',
+    'pyautogui>=0.9.0',
+    'pytesseract>=0.3.0',
+    'applescript>=2021.2.9'
+]
 
 # Read README
 with open('README.md', encoding='utf-8') as f:
@@ -19,7 +30,8 @@ setup(
     author='Lance James',
     author_email='lance@221b.sh',
     url='https://github.com/lancejames221b/optimus-cline',
-    packages=find_packages(exclude=['tests*']),
+    packages=['assistant'],  # Explicitly include the assistant package
+    package_dir={'': '.'},  # Package is in the current directory
     install_requires=requirements,
     python_requires='>=3.9',
     entry_points={
@@ -47,18 +59,13 @@ setup(
         'Documentation': 'https://github.com/lancejames221b/optimus-cline/docs',
     },
     package_data={
-        'optimus_cline': [
+        'assistant': [
             'templates/*',
             'docs/*',
         ],
     },
     include_package_data=True,
     zip_safe=False,
-    options={
-        'bdist_wheel': {
-            'universal': True
-        }
-    },
     extras_require={
         'dev': [
             'pytest>=7.0.0',

@@ -1,10 +1,21 @@
+"""
+Search Implementation
+-------------------
+
+Handles research operations using Perplexity's small online model through OpenRouter.
+"""
+
 import os
 import json
 import logging
 from typing import Optional, List, Dict, Any
 from dataclasses import dataclass
 from datetime import datetime
-from openai import AsyncOpenAI
+import sys
+
+# Add parent directory to path for imports
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from assistant.openrouter_manager import OpenRouterManager
 
 @dataclass
 class SearchResult:
@@ -16,158 +27,168 @@ class SearchResult:
     tokens: int
     model: str
 
-class PerplexitySearch:
-    """Intelligent search using Perplexity API"""
+class SearchError(Exception):
+    """Base class for search errors"""
+    pass
+
+class ValidationError(SearchError):
+    """Input validation errors"""
+    pass
+
+class CacheError(SearchError):
+    """Cache-related errors"""
+    pass
+
+class ResearchManager:
+    """Manages research operations"""
     
     def __init__(self):
-        self.api_key = self._load_api_key()
-        self.client = AsyncOpenAI(
-            api_key=self.api_key,
-            base_url="https://api.perplexity.ai"
-        )
-        
-        # Set up logging
         self.logger = logging.getLogger(__name__)
         
-        # Cache directory
+        # Initialize OpenRouter manager
+        self.router = OpenRouterManager()
+        
+        # Default model - using Perplexity through OpenRouter
+        self.default_model = 'pplx-small'  # maps to llama-3.1-sonar-small-128k-online
+        
+        # Search history
+        self.history: List[SearchResult] = []
+        
+        # Cache settings
         self.cache_dir = os.path.expanduser('~/.mac-assistant/search_cache')
+        self.cache_duration = 3600  # 1 hour in seconds
         os.makedirs(self.cache_dir, exist_ok=True)
-        
-        # Default to small model for efficiency
-        self.default_model = "llama-3.1-sonar-small-128k-online"
     
-    def _load_api_key(self) -> str:
-        """Load Perplexity API key"""
-        # Try environment first
-        api_key = os.getenv('PERPLEXITY_API_KEY')
-        if api_key:
-            return api_key
-        
-        # Try keys file
-        keys_file = '/Volumes/SeXternal/keys.txt'
-        if os.path.exists(keys_file):
-            with open(keys_file) as f:
-                for line in f:
-                    if line.startswith('PERPLEXITY_API_KEY='):
-                        return line.split('=')[1].strip()
-        
-        raise ValueError("Perplexity API key not found")
+    def _validate_input(self, query: str):
+        """Validate input parameters"""
+        if not query or not query.strip():
+            raise ValidationError("Query cannot be empty")
+        if len(query) > 1000:
+            raise ValidationError("Query too long (max 1000 characters)")
     
     def _get_cache_path(self, query: str) -> str:
         """Get cache file path for query"""
         # Create safe filename from query
         safe_query = "".join(x for x in query if x.isalnum() or x in "._- ")
         safe_query = safe_query[:100]  # Limit length
-        return os.path.join(self.cache_dir, f"{safe_query}.json")
+        timestamp = datetime.now().strftime("%Y%m%d")
+        return os.path.join(self.cache_dir, f"{safe_query}_{timestamp}.json")
     
     def _check_cache(self, query: str) -> Optional[SearchResult]:
         """Check if result is cached"""
-        cache_path = self._get_cache_path(query)
-        if os.path.exists(cache_path):
-            try:
+        try:
+            cache_path = self._get_cache_path(query)
+            if os.path.exists(cache_path):
                 with open(cache_path) as f:
                     data = json.load(f)
-                    # Check if cache is less than 1 hour old
+                    # Check if cache is still valid
                     timestamp = datetime.fromisoformat(data['timestamp'])
                     age = datetime.now() - timestamp
-                    if age.total_seconds() < 3600:  # 1 hour
+                    if age.total_seconds() < self.cache_duration:
                         return SearchResult(**data)
-            except Exception as e:
-                self.logger.error(f"Error reading cache: {e}")
+                    else:
+                        # Remove expired cache
+                        os.remove(cache_path)
+        except Exception as e:
+            raise CacheError(f"Error reading cache: {e}")
         return None
     
     def _save_cache(self, result: SearchResult):
         """Save result to cache"""
-        cache_path = self._get_cache_path(result.query)
         try:
+            cache_path = self._get_cache_path(result.query)
             with open(cache_path, 'w') as f:
                 json.dump(result.__dict__, f, indent=2)
         except Exception as e:
-            self.logger.error(f"Error saving cache: {e}")
+            raise CacheError(f"Error saving cache: {e}")
     
-    async def search(self, query: str, context: Optional[str] = None) -> SearchResult:
-        """Perform search query"""
-        # Check cache first
-        cached = self._check_cache(query)
-        if cached:
-            self.logger.info(f"Using cached result for: {query}")
-            return cached
-        
-        # Create system prompt
-        if context:
-            system_prompt = (
-                f"Context: {context}\n\n"
-                "Provide accurate, relevant information based on the context. "
-                "Focus on practical, actionable insights."
-            )
-        else:
-            system_prompt = (
-                "You are a research assistant helping with Mac OS automation and workflows. "
-                "Provide accurate, practical information focused on implementation details "
-                "and best practices."
-            )
-        
-        # Create messages
-        messages = [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": query}
-        ]
-        
+    def _clean_old_cache(self):
+        """Clean expired cache files"""
         try:
-            # Make API request
-            response = await self.client.chat.completions.create(
-                model=self.default_model,
-                messages=messages
-            )
-            
-            # Create result
-            result = SearchResult(
-                query=query,
-                response=response.choices[0].message.content,
-                context=context,
-                timestamp=datetime.now().isoformat(),
-                tokens=response.usage.total_tokens,
-                model=self.default_model
-            )
-            
-            # Cache result
-            self._save_cache(result)
-            
-            return result
-            
+            now = datetime.now()
+            for filename in os.listdir(self.cache_dir):
+                filepath = os.path.join(self.cache_dir, filename)
+                if os.path.isfile(filepath):
+                    # Check file age
+                    mtime = datetime.fromtimestamp(os.path.getmtime(filepath))
+                    age = now - mtime
+                    if age.total_seconds() > self.cache_duration:
+                        os.remove(filepath)
         except Exception as e:
-            self.logger.error(f"Search error: {e}")
-            raise
-
-class ResearchManager:
-    """Manages research operations"""
-    
-    def __init__(self):
-        self.search = PerplexitySearch()
-        self.history: List[SearchResult] = []
+            self.logger.error(f"Error cleaning cache: {e}")
     
     async def research(self, query: str, context: Optional[str] = None) -> SearchResult:
         """Perform research with context awareness"""
-        # Add task-specific context
-        if context:
-            context = (
-                f"Task Context: {context}\n"
-                "Focus on practical implementation details for Mac OS automation."
+        try:
+            # Validate input
+            self._validate_input(query)
+            
+            # Clean old cache files
+            self._clean_old_cache()
+            
+            # Check cache first
+            try:
+                cached = self._check_cache(query)
+                if cached:
+                    self.logger.info(f"Using cached result for: {query}")
+                    return cached
+            except CacheError as e:
+                self.logger.warning(f"Cache error: {e}")
+            
+            # Build messages
+            messages = []
+            if context:
+                messages.append({
+                    'role': 'system',
+                    'content': context
+                })
+            messages.append({
+                'role': 'user',
+                'content': query
+            })
+            
+            # Get response through OpenRouter
+            result = await self.router.chat(
+                messages=messages,
+                model=self.default_model
             )
-        
-        # Perform search
-        result = await self.search.search(query, context)
-        
-        # Update history
-        self.history.append(result)
-        
-        return result
+            
+            search_result = SearchResult(
+                query=query,
+                response=result.response,
+                context=context,
+                timestamp=datetime.now().isoformat(),
+                tokens=0,  # OpenRouter doesn't provide token count yet
+                model=result.model
+            )
+            
+            # Cache result
+            try:
+                self._save_cache(search_result)
+            except CacheError as e:
+                self.logger.warning(f"Cache error: {e}")
+            
+            # Update history
+            self.history.append(search_result)
+            
+            return search_result
+            
+        except Exception as e:
+            self.logger.error(f"Research error: {e}")
+            return SearchResult(
+                query=query,
+                response=f"Error: {str(e)}",
+                context=context,
+                timestamp=datetime.now().isoformat(),
+                tokens=0,
+                model="fallback"
+            )
     
     def get_history(self, limit: Optional[int] = None) -> List[SearchResult]:
         """Get search history"""
-        if limit:
+        if limit and limit > 0:
             return self.history[-limit:]
-        return self.history
+        return self.history.copy()  # Return copy to prevent modification
     
     def clear_history(self):
         """Clear search history"""

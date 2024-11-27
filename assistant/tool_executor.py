@@ -1,270 +1,281 @@
+"""
+Tool Executor Module
+------------------
+
+Executes tool requests with safety checks.
+"""
+
 import os
-import re
-import sys
 import json
 import logging
 import asyncio
-import subprocess
-from typing import Optional, Dict, Any, List, Callable
+from typing import Optional, Dict, Any
 from dataclasses import dataclass
 from datetime import datetime
-from vscode_integration import ToolRequest
-from browser_control import BrowserControl, BrowserAction
+
+@dataclass
+class ToolRequest:
+    """Tool request"""
+    tool: str
+    params: Dict[str, Any]
+    timestamp: str
 
 @dataclass
 class ToolResult:
-    """Represents a tool execution result"""
+    """Result of tool execution"""
     success: bool
-    output: Optional[str] = None
+    output: Optional[Any] = None
     error: Optional[str] = None
-    duration: Optional[float] = None
 
 class ToolExecutor:
-    """Executes tool requests safely"""
+    """Executes tool requests"""
     
     def __init__(self):
         self.logger = logging.getLogger(__name__)
         
-        # Working directory
-        self.work_dir = os.getcwd()
+        # Known tools
+        self.tools = {
+            'execute_command': self._execute_command,
+            'read_file': self._read_file,
+            'write_to_file': self._write_to_file,
+            'list_files': self._list_files,
+            'search_files': self._search_files,
+            'browser_action': self._browser_action,
+            'app_launch': self._app_launch,
+            'app_close': self._app_close
+        }
         
-        # Browser control
-        self.browser = BrowserControl()
-        
-        # Tool handlers
-        self.handlers: Dict[str, Callable[[Dict[str, Any]], ToolResult]] = {
-            'execute_command': self._handle_command,
-            'write_to_file': self._handle_write,
-            'read_file': self._handle_read,
-            'search_files': self._handle_search,
-            'list_files': self._handle_list,
-            'browser_action': self._handle_browser
+        # Common applications
+        self.apps = {
+            'chrome': {
+                'name': 'Google Chrome',
+                'process': 'chrome',
+                'launch': 'open -a "Google Chrome"'
+            },
+            'firefox': {
+                'name': 'Firefox',
+                'process': 'firefox',
+                'launch': 'open -a Firefox'
+            },
+            'safari': {
+                'name': 'Safari',
+                'process': 'safari',
+                'launch': 'open -a Safari'
+            },
+            'vscode': {
+                'name': 'Visual Studio Code',
+                'process': 'code',
+                'launch': 'code'
+            },
+            'terminal': {
+                'name': 'Terminal',
+                'process': 'terminal',
+                'launch': 'open -a Terminal'
+            },
+            'mail': {
+                'name': 'Mail',
+                'process': 'mail',
+                'launch': 'open -a Mail'
+            }
         }
     
     async def execute(self, request: ToolRequest) -> ToolResult:
-        """Execute a tool request"""
+        """Execute tool request"""
         try:
-            # Get handler
-            handler = self.handlers.get(request.tool)
-            if not handler:
+            # Get tool handler
+            tool = self.tools.get(request.tool)
+            if not tool:
                 return ToolResult(
                     success=False,
                     error=f"Unknown tool: {request.tool}"
                 )
             
-            # Time execution
-            start = datetime.now()
-            
             # Execute tool
-            result = await handler(request.params)
-            
-            # Add duration
-            result.duration = (datetime.now() - start).total_seconds()
-            
-            return result
+            return await tool(request.params)
             
         except Exception as e:
-            self.logger.error(f"Error executing tool {request.tool}: {e}")
+            self.logger.error(f"Error executing tool: {e}")
             return ToolResult(
                 success=False,
                 error=str(e)
             )
     
-    async def _handle_command(self, params: Dict[str, Any]) -> ToolResult:
-        """Handle execute_command tool"""
+    async def _execute_command(self, params: Dict[str, Any]) -> ToolResult:
+        """Execute system command"""
         try:
-            command = params.get('command')
-            if not command:
+            command = params['command']
+            
+            # Basic safety check
+            if any(x in command.lower() for x in ['rm', 'sudo', 'shutdown']):
                 return ToolResult(
                     success=False,
-                    error="No command provided"
+                    error="Command not allowed"
                 )
             
             # Execute command
-            process = await asyncio.create_subprocess_shell(
-                command,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-                cwd=self.work_dir
-            )
-            
-            # Get output
-            stdout, stderr = await process.communicate()
-            
-            # Check result
-            if process.returncode == 0:
-                return ToolResult(
-                    success=True,
-                    output=stdout.decode().strip()
-                )
-            else:
-                return ToolResult(
-                    success=False,
-                    error=stderr.decode().strip()
-                )
-                
-        except Exception as e:
-            return ToolResult(
-                success=False,
-                error=str(e)
-            )
-    
-    async def _handle_write(self, params: Dict[str, Any]) -> ToolResult:
-        """Handle write_to_file tool"""
-        try:
-            path = params.get('path')
-            content = params.get('content')
-            
-            if not path or content is None:
-                return ToolResult(
-                    success=False,
-                    error="Missing path or content"
-                )
-            
-            # Ensure path is relative to work dir
-            full_path = os.path.join(self.work_dir, path)
-            
-            # Create directories
-            os.makedirs(os.path.dirname(full_path), exist_ok=True)
-            
-            # Write file
-            with open(full_path, 'w') as f:
-                f.write(content)
-            
+            result = os.popen(command).read()
             return ToolResult(
                 success=True,
-                output=f"Wrote {len(content)} bytes to {path}"
+                output=result
             )
-                
+            
         except Exception as e:
             return ToolResult(
                 success=False,
                 error=str(e)
             )
     
-    async def _handle_read(self, params: Dict[str, Any]) -> ToolResult:
-        """Handle read_file tool"""
+    async def _read_file(self, params: Dict[str, Any]) -> ToolResult:
+        """Read file contents"""
         try:
-            path = params.get('path')
-            if not path:
+            path = params['path']
+            
+            # Basic path validation
+            if '..' in path or path.startswith('/'):
                 return ToolResult(
                     success=False,
-                    error="No path provided"
+                    error="Invalid path"
                 )
             
-            # Ensure path is relative to work dir
-            full_path = os.path.join(self.work_dir, path)
-            
             # Read file
-            with open(full_path) as f:
+            with open(path, 'r') as f:
                 content = f.read()
             
             return ToolResult(
                 success=True,
                 output=content
             )
-                
+            
         except Exception as e:
             return ToolResult(
                 success=False,
                 error=str(e)
             )
     
-    async def _handle_search(self, params: Dict[str, Any]) -> ToolResult:
-        """Handle search_files tool"""
+    async def _write_to_file(self, params: Dict[str, Any]) -> ToolResult:
+        """Write file contents"""
         try:
-            path = params.get('path')
-            regex = params.get('regex')
-            file_pattern = params.get('file_pattern', '*')
+            path = params['path']
+            content = params['content']
             
-            if not path or not regex:
+            # Basic path validation
+            if '..' in path or path.startswith('/'):
                 return ToolResult(
                     success=False,
-                    error="Missing path or regex"
+                    error="Invalid path"
                 )
             
-            # Ensure path is relative to work dir
-            full_path = os.path.join(self.work_dir, path)
+            # Create directories if needed
+            os.makedirs(os.path.dirname(path), exist_ok=True)
             
-            # Compile regex
-            try:
-                pattern = re.compile(regex, re.MULTILINE)
-            except re.error as e:
-                return ToolResult(
-                    success=False,
-                    error=f"Invalid regex pattern: {e}"
-                )
-            
-            # Search files
-            matches = []
-            for root, dirs, files in os.walk(full_path):
-                for file in files:
-                    if file_pattern == '*' or re.match(file_pattern.replace('*', '.*'), file):
-                        file_path = os.path.join(root, file)
-                        try:
-                            with open(file_path) as f:
-                                content = f.read()
-                                
-                                # Find matches with context
-                                lines = content.split('\n')
-                                for i, line in enumerate(lines):
-                                    if pattern.search(line):
-                                        # Get context lines
-                                        start = max(0, i - 2)
-                                        end = min(len(lines), i + 3)
-                                        context = '\n'.join(lines[start:end])
-                                        
-                                        matches.append({
-                                            'file': os.path.relpath(file_path, self.work_dir),
-                                            'line': i + 1,
-                                            'context': context
-                                        })
-                        except Exception as e:
-                            self.logger.warning(f"Error reading {file_path}: {e}")
+            # Write file
+            with open(path, 'w') as f:
+                f.write(content)
             
             return ToolResult(
-                success=True,
-                output=json.dumps(matches, indent=2)
+                success=True
             )
-                
+            
         except Exception as e:
             return ToolResult(
                 success=False,
                 error=str(e)
             )
     
-    async def _handle_list(self, params: Dict[str, Any]) -> ToolResult:
-        """Handle list_files tool"""
+    async def _list_files(self, params: Dict[str, Any]) -> ToolResult:
+        """List files in directory"""
         try:
-            path = params.get('path')
+            path = params.get('path', '.')
             recursive = params.get('recursive', False)
             
-            if not path:
+            # Basic path validation
+            if '..' in path or path.startswith('/'):
                 return ToolResult(
                     success=False,
-                    error="No path provided"
+                    error="Invalid path"
                 )
-            
-            # Ensure path is relative to work dir
-            full_path = os.path.join(self.work_dir, path)
             
             # List files
             if recursive:
                 files = []
-                for root, dirs, filenames in os.walk(full_path):
-                    rel_root = os.path.relpath(root, self.work_dir)
+                for root, _, filenames in os.walk(path):
                     for filename in filenames:
-                        files.append(os.path.join(rel_root, filename))
+                        files.append(os.path.join(root, filename))
             else:
-                files = [
-                    f for f in os.listdir(full_path)
-                    if os.path.isfile(os.path.join(full_path, f))
-                ]
+                files = os.listdir(path)
             
             return ToolResult(
                 success=True,
-                output=json.dumps(files, indent=2)
+                output=files
             )
+            
+        except Exception as e:
+            return ToolResult(
+                success=False,
+                error=str(e)
+            )
+    
+    async def _search_files(self, params: Dict[str, Any]) -> ToolResult:
+        """Search files for pattern"""
+        try:
+            path = params.get('path', '.')
+            pattern = params['regex']
+            file_pattern = params.get('file_pattern', '*')
+            
+            # Basic path validation
+            if '..' in path or path.startswith('/'):
+                return ToolResult(
+                    success=False,
+                    error="Invalid path"
+                )
+            
+            # Search files
+            results = []
+            for root, _, filenames in os.walk(path):
+                for filename in filenames:
+                    if file_pattern == '*' or filename.endswith(file_pattern):
+                        filepath = os.path.join(root, filename)
+                        try:
+                            with open(filepath, 'r') as f:
+                                for line in f:
+                                    if pattern in line:
+                                        results.append({
+                                            'file': filepath,
+                                            'line': line.strip()
+                                        })
+                        except:
+                            pass
+            
+            return ToolResult(
+                success=True,
+                output=results
+            )
+            
+        except Exception as e:
+            return ToolResult(
+                success=False,
+                error=str(e)
+            )
+    
+    async def _browser_action(self, params: Dict[str, Any]) -> ToolResult:
+        """Handle browser action"""
+        try:
+            action = params['action']
+            
+            if action == 'launch':
+                url = params.get('url', 'about:blank')
+                os.system(f'open -a "Google Chrome" "{url}"')
+                return ToolResult(success=True)
+                
+            elif action == 'close':
+                os.system('pkill Chrome')
+                return ToolResult(success=True)
+                
+            else:
+                return ToolResult(
+                    success=False,
+                    error=f"Unknown browser action: {action}"
+                )
                 
         except Exception as e:
             return ToolResult(
@@ -272,42 +283,42 @@ class ToolExecutor:
                 error=str(e)
             )
     
-    async def _handle_browser(self, params: Dict[str, Any]) -> ToolResult:
-        """Handle browser_action tool"""
+    async def _app_launch(self, params: Dict[str, Any]) -> ToolResult:
+        """Launch application"""
         try:
-            action = params.get('action')
-            if not action:
-                return ToolResult(
-                    success=False,
-                    error="No action provided"
-                )
+            app_name = params['app_name'].lower()
             
-            # Create browser action
-            browser_action = BrowserAction(
-                action=action,
-                params=params,
-                timestamp=datetime.now().isoformat()
+            # Check known apps
+            if app_name in self.apps:
+                app = self.apps[app_name]
+                os.system(app['launch'])
+                return ToolResult(success=True)
+            
+            # Try generic launch
+            os.system(f'open -a "{app_name}"')
+            return ToolResult(success=True)
+            
+        except Exception as e:
+            return ToolResult(
+                success=False,
+                error=str(e)
             )
+    
+    async def _app_close(self, params: Dict[str, Any]) -> ToolResult:
+        """Close application"""
+        try:
+            app_name = params['app_name'].lower()
             
-            # Execute action
-            result = await self.browser.execute(browser_action)
+            # Check known apps
+            if app_name in self.apps:
+                app = self.apps[app_name]
+                os.system(f'pkill {app["process"]}')
+                return ToolResult(success=True)
             
-            # Convert result
-            if result.success:
-                output = {
-                    'screenshot': result.screenshot,
-                    'logs': result.logs
-                }
-                return ToolResult(
-                    success=True,
-                    output=json.dumps(output, indent=2)
-                )
-            else:
-                return ToolResult(
-                    success=False,
-                    error=result.error
-                )
-                
+            # Try generic close
+            os.system(f'pkill "{app_name}"')
+            return ToolResult(success=True)
+            
         except Exception as e:
             return ToolResult(
                 success=False,

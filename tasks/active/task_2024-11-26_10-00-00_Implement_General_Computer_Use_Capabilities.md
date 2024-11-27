@@ -1,160 +1,69 @@
-# Implement General Computer Use Capabilities
+# Task: Implement General Computer Use Capabilities
 
-## Objective
-Expand Cline to support general computer use capabilities similar to Claude, enabling automation of administrative tasks, document processing, and application interaction.
+## Status: In Progress
 
-## Implementation Plan
+## Research Findings
 
-### 1. Core Framework Updates
-- [ ] Create computer use module for core capabilities
-- [ ] Implement file system operations wrapper
-- [ ] Add application interaction framework
-- [ ] Create browser automation module
-- [ ] Implement GUI element detection system
-- [ ] Add OCR capabilities for screen reading
+### Claude Computer Use Feature
+- Claude has a built-in computer use feature that can analyze screenshots and perform UI actions
+- Requires direct Anthropic API access with specific beta headers
+- Not currently supported through OpenRouter due to compatibility issues
 
-### 2. Security Framework
-- [ ] Design permission system
-- [ ] Implement approval workflows
-- [ ] Add resource usage monitoring
-- [ ] Create security policy configuration
-- [ ] Implement sandboxed execution
-- [ ] Add audit logging
+### Alternative Implementation
+Implemented a PyAutoGUI-based solution with:
+1. Platform-specific handling (macOS/Windows)
+2. Safety measures and error handling
+3. Process and window management
+4. File operation verification
 
-### 3. Application Integration
-- [ ] Slack integration
-- [ ] Email client integration
-- [ ] Calendar integration
-- [ ] Document processing capabilities
-- [ ] Browser automation improvements
-- [ ] VS Code extension updates
+## Implementation Details
 
-### 4. User Interface
-- [ ] Add computer use control panel
-- [ ] Create task approval interface
-- [ ] Add resource monitoring display
-- [ ] Implement activity logs viewer
-- [ ] Create configuration interface
-- [ ] Add application profiles manager
+### 1. File Operations
+- Created test_computer_use.py for automated testing
+- Implemented file creation, writing, and verification
+- Added proper error handling and cleanup
 
-## Technical Design
+### 2. System Monitoring
+- Added CPU and memory monitoring
+- Process listing and sorting
+- Resource usage reporting
 
-### Computer Use Module
-```python
-class ComputerUse:
-    def __init__(self):
-        self.file_system = FileSystemOperations()
-        self.applications = ApplicationControl()
-        self.browser = BrowserAutomation()
-        self.gui = GUIInteraction()
-        self.security = SecurityManager()
-        
-    def execute_task(self, task):
-        """Execute a computer use task with security checks"""
-        if self.security.approve_task(task):
-            return task.execute()
-        return False
-```
+### 3. UI Automation
+- Platform detection for macOS/Windows
+- Safe window management to avoid closing VSCode
+- Screenshot-based verification
+- Retry logic and timeouts
 
-### Security Manager
-```python
-class SecurityManager:
-    def __init__(self):
-        self.permissions = PermissionSystem()
-        self.monitor = ResourceMonitor()
-        self.audit = AuditLogger()
-        
-    def approve_task(self, task):
-        """Check if task is allowed and within limits"""
-        return (self.permissions.check(task) and 
-                self.monitor.check_resources(task))
-```
+## Code Examples
+See assistant/test_computer_use.py for implementation details.
 
-### Application Control
-```python
-class ApplicationControl:
-    def __init__(self):
-        self.window_manager = WindowManager()
-        self.process_manager = ProcessManager()
-        self.accessibility = AccessibilityAPI()
-        
-    def interact(self, app_name, action):
-        """Interact with an application"""
-        app = self.window_manager.find_window(app_name)
-        return self.accessibility.perform_action(app, action)
-```
-
-## Integration Points
-
-### 1. File System
-- Read/write operations
-- File monitoring
-- Change detection
-- Access control
-
-### 2. Applications
-- Window management
-- Process control
-- UI interaction
-- Event handling
-
-### 3. Browser
-- Page navigation
-- Element interaction
-- Form filling
-- Data extraction
-
-### 4. Communication
-- Slack messaging
-- Email handling
-- Calendar management
-- Meeting scheduling
-
-## Security Considerations
-
-1. Permission System
-- File access permissions
-- Application interaction permissions
-- Network access control
-- Resource usage limits
-
-2. Approval Workflows
-- Task review
-- Change confirmation
-- Resource allocation
-- Security policy enforcement
-
-3. Monitoring
-- Activity logging
-- Resource tracking
-- Error detection
-- Security violations
+## Documentation
+Updated docs/KNOWLEDGE.md with:
+- Claude computer use feature details
+- PyAutoGUI best practices
+- Error handling strategies
+- Future considerations
 
 ## Next Steps
+1. Consider implementing OCR for text verification
+2. Add image recognition for UI elements
+3. Improve error recovery strategies
+4. Add support for multi-monitor setups
 
-1. Begin with core framework:
-   - Implement basic file operations
-   - Add simple GUI detection
-   - Create security framework
+## Issues Encountered
+1. OpenRouter compatibility with Claude's computer use feature
+2. Window management complexity (avoiding VSCode closure)
+3. File save dialog reliability
+4. Platform-specific behavior differences
 
-2. Add application support:
-   - Start with VS Code integration
-   - Add Slack support
-   - Implement browser automation
+## Solutions Applied
+1. Switched to PyAutoGUI-based implementation
+2. Added process name checking before window closure
+3. Created files directly when possible
+4. Added platform-specific handling
 
-3. Enhance security:
-   - Implement approval system
-   - Add resource monitoring
-   - Create audit logging
-
-4. Improve UI:
-   - Add control panel
-   - Create monitoring interface
-   - Implement configuration UI
-
-## Notes
-- Focus on security and user control
-- Start with most commonly used applications
-- Build modular, extensible framework
-- Maintain audit trail of all actions
-- Implement robust error handling
+## Resources
+- PyAutoGUI documentation
+- Claude API documentation
+- Process management with psutil
+- Platform-specific keyboard shortcuts

@@ -17,9 +17,14 @@ class AssistantChat:
     def __init__(self):
         # Set up logging
         self.logger = logging.getLogger(__name__)
+        logging.basicConfig(level=logging.INFO)
         
         # Initialize assistant
-        self.assistant = MacAssistant()
+        try:
+            self.assistant = MacAssistant()
+        except Exception as e:
+            self.logger.error(f"Failed to initialize assistant: {e}")
+            raise
         
         # Set up rich console
         self.console = Console()
@@ -46,52 +51,64 @@ class AssistantChat:
         """Show welcome message"""
         welcome = """# Mac Assistant
 
-Your AI-powered automation assistant for macOS.
+Your AI-powered assistant for macOS. I can help you with:
+
+🚀 Application Control
+ • Launch and manage applications
+ • Open specific files or folders
+ • Control system settings
+
+🔍 Information & Search
+ • Answer questions about any topic
+ • Search the web for information
+ • Explain concepts and provide examples
+
+💻 System Operations
+ • Execute system commands
+ • Manage files and directories
+ • Handle common tasks
 
 Available commands:
-- /help: Show this help message
-- /history: Show task history
-- /clear: Clear task history
-- /quit: Exit assistant
+ • /help: Show help message
+ • /history: Show task history
+ • /clear: Clear task history
+ • /quit: Exit assistant
 
-Type your task in natural language, for example:
-- "Open Chrome and search for Python automation"
-- "Check my Gmail for new messages"
-- "Create a new document in VSCode"
+Just tell me what you need in natural language!
 """
         self.console.print(Markdown(welcome))
     
     async def show_help(self, *args):
         """Show help message"""
-        help_text = """# Available Commands
+        help_text = """# Mac Assistant Help
 
-- /help: Show this help message
-- /history: Show task history
-- /clear: Clear task history
-- /quit: Exit assistant
+I can help you with various tasks. Here are some examples:
 
-## Task Examples
+## Application Control
+ • "Open Chrome"
+ • "Launch Visual Studio Code"
+ • "Start Spotify"
+ • "Open my downloads folder"
 
-1. Browser Tasks:
-   - "Open Chrome and go to gmail.com"
-   - "Search for Python automation tutorials"
-   - "Check my calendar for today's events"
+## Information & Search
+ • "What's the weather like today?"
+ • "Tell me about quantum computing"
+ • "How do I create a Python virtual environment?"
+ • "Search for coffee shops near me"
 
-2. Application Tasks:
-   - "Open VSCode and create a new file"
-   - "Send a message in Slack"
-   - "Check for new emails in Gmail"
+## System Operations
+ • "Show my IP address"
+ • "Create a new folder called Projects"
+ • "What's using my disk space?"
+ • "Check system memory usage"
 
-3. System Tasks:
-   - "Take a screenshot of the current window"
-   - "Create a new folder on the desktop"
-   - "Open Terminal and run updates"
+## Available Commands
+ • /help: Show this help message
+ • /history: Show task history
+ • /clear: Clear task history
+ • /quit: Exit assistant
 
-The assistant will:
-1. Analyze your task
-2. Research how to accomplish it
-3. Execute the necessary actions
-4. Provide feedback on the results"""
+Just ask your question or describe your task in natural language. I'll understand what you need and help you accomplish it!"""
         
         self.console.print(Markdown(help_text))
         return False  # Don't exit
@@ -139,19 +156,22 @@ The assistant will:
                     return False
             
             # Execute task
-            self.console.print("\n[bold blue]Analyzing task...[/bold blue]")
+            self.console.print("\n[bold blue]Processing your request...[/bold blue]")
             result = await self.assistant.execute_task(task)
             
             # Show result
             if result:
                 self.console.print(Panel(
                     result,
-                    title="Task Result",
+                    title="Response",
                     border_style="green"
                 ))
             
             return False  # Don't exit
             
+        except KeyboardInterrupt:
+            self.console.print("\n[yellow]Task cancelled[/yellow]")
+            return False
         except Exception as e:
             self.logger.error(f"Task failed: {e}")
             self.console.print(f"[red]Error: {str(e)}[/red]")
@@ -159,35 +179,40 @@ The assistant will:
     
     async def run(self):
         """Run the chat interface"""
-        self.show_welcome()
-        
-        while True:
-            try:
-                # Get user input
-                task = await self.session.prompt_async(
-                    HTML("<ansiyellow>task></ansiyellow> ")
-                )
-                
-                if not task.strip():
+        try:
+            self.show_welcome()
+            
+            while True:
+                try:
+                    # Get user input
+                    task = await self.session.prompt_async(
+                        HTML("<ansiyellow>ask></ansiyellow> ")
+                    )
+                    
+                    if not task.strip():
+                        continue
+                    
+                    # Handle task
+                    should_exit = await self.handle_task(task.strip())
+                    if should_exit:
+                        break
+                    
+                except KeyboardInterrupt:
                     continue
-                
-                # Handle task
-                should_exit = await self.handle_task(task.strip())
-                if should_exit:
+                except EOFError:
                     break
-                
-            except KeyboardInterrupt:
-                continue
-            except EOFError:
-                break
-            except Exception as e:
-                self.logger.error(f"Error: {e}")
-                self.console.print(f"[red]Error: {str(e)}[/red]")
+                except Exception as e:
+                    self.logger.error(f"Error: {e}")
+                    self.console.print(f"[red]Error: {str(e)}[/red]")
+        
+        except Exception as e:
+            self.logger.error(f"Fatal error: {e}")
+            self.console.print(f"[red]Fatal error: {str(e)}[/red]")
+        finally:
+            # Clean up
+            self.console.print("\n[yellow]Shutting down...[/yellow]")
 
 def main():
     """Run the assistant"""
     chat = AssistantChat()
     asyncio.run(chat.run())
-
-if __name__ == '__main__':
-    main()

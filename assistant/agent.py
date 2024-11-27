@@ -2,11 +2,11 @@ import os
 import json
 import logging
 import asyncio
+import subprocess
 from typing import Optional, List, Dict, Any
 from dataclasses import dataclass
 from datetime import datetime
 from .search import ResearchManager, SearchResult
-from .computer import ComputerController, ScreenAnalyzer, UIElement
 
 @dataclass
 class Task:
@@ -25,8 +25,6 @@ class MacAssistant:
         
         # Initialize components
         self.research = ResearchManager()
-        self.computer = ComputerController()
-        self.screen = ScreenAnalyzer()
         
         # Task history
         self.history: List[Task] = []
@@ -62,42 +60,54 @@ class MacAssistant:
         """Analyze task to determine required actions"""
         # Research how to accomplish task
         result = await self.research.research(
-            f"How to automate on Mac OS: {description}",
-            context="Need to perform task using Python, pyautogui, and system control"
+            f"Analyze this task: '{description}'. Respond with a JSON object containing: "
+            "1. type: The type of task ('app_launch', 'web_search', 'system_command', or 'general_query') "
+            "2. action: For app_launch: the terminal command (e.g. 'open -a \"Google Chrome\"'), "
+            "          For web_search: the search URL, "
+            "          For system_command: the command to run, "
+            "          For general_query: leave empty "
+            "3. response: A natural response to the query (required for general_query, optional for others) "
+            "4. confidence: A number 0-1 indicating confidence in understanding the task "
+            "Format the response as valid JSON with these exact fields.",
+            context="Need to understand user intent and determine appropriate action"
         )
         
-        # Extract key information
-        analysis = {
-            'description': description,
-            'requires_browser': any(word in description.lower() 
-                                  for word in ['chrome', 'safari', 'web', 'browser']),
-            'requires_keyboard': any(word in description.lower() 
-                                   for word in ['type', 'enter', 'input']),
-            'requires_mouse': any(word in description.lower() 
-                                for word in ['click', 'select', 'choose']),
-            'target_app': self._detect_target_app(description),
-            'research_result': result.response
-        }
-        
-        return analysis
-    
-    def _detect_target_app(self, description: str) -> Optional[str]:
-        """Detect target application from description"""
-        apps = {
-            'chrome': ['chrome', 'google', 'browser'],
-            'safari': ['safari', 'browser'],
-            'vscode': ['vscode', 'code', 'editor'],
-            'terminal': ['terminal', 'command', 'shell'],
-            'slack': ['slack', 'chat'],
-            'gmail': ['gmail', 'email', 'mail']
-        }
-        
-        description = description.lower()
-        for app, keywords in apps.items():
-            if any(word in description for word in keywords):
-                return app
-        
-        return None
+        try:
+            # Extract JSON from response
+            response_text = result.response
+            # Find JSON block between ```json and ```
+            if "```json" in response_text:
+                json_text = response_text.split("```json")[1].split("```")[0].strip()
+            else:
+                # Try to find a JSON block between any ``` markers
+                if "```" in response_text:
+                    json_text = response_text.split("```")[1].strip()
+                else:
+                    # Try to parse the whole response as JSON
+                    json_text = response_text.strip()
+            
+            # Parse JSON
+            task_info = json.loads(json_text)
+            
+            # Add original description
+            task_info['description'] = description
+            
+            return task_info
+            
+        except Exception as e:
+            self.logger.error(f"Failed to parse task info: {e}")
+            # Get a general response instead
+            result = await self.research.research(
+                description,
+                context="Provide a helpful response to the user's request"
+            )
+            return {
+                'description': description,
+                'type': 'general_query',
+                'action': None,
+                'response': result.response,
+                'confidence': 0.8  # High confidence in providing a general response
+            }
     
     async def execute_task(self, description: str, context: Optional[str] = None) -> str:
         """Execute a task based on description"""
@@ -112,13 +122,38 @@ class MacAssistant:
             # Analyze task
             analysis = await self.analyze_task(description)
             
-            # Perform task based on analysis
-            if analysis['requires_browser']:
-                result = await self._handle_browser_task(analysis)
-            elif analysis['target_app']:
-                result = await self._handle_app_task(analysis)
+            if analysis.get('confidence', 0) > 0.7:
+                task_type = analysis.get('type', 'general_query')
+                
+                if task_type == 'app_launch' and analysis.get('action'):
+                    try:
+                        subprocess.run(analysis['action'], shell=True, check=True)
+                        result = f"Launched the application"
+                    except subprocess.CalledProcessError as e:
+                        self.logger.error(f"Command failed: {e}")
+                        result = f"Failed to launch application: {e}"
+                
+                elif task_type == 'system_command' and analysis.get('action'):
+                    try:
+                        subprocess.run(analysis['action'], shell=True, check=True)
+                        result = "Command executed successfully"
+                    except subprocess.CalledProcessError as e:
+                        self.logger.error(f"Command failed: {e}")
+                        result = f"Command failed: {e}"
+                
+                elif task_type == 'web_search' and analysis.get('action'):
+                    try:
+                        subprocess.run(f'open "{analysis["action"]}"', shell=True, check=True)
+                        result = "Opened search results in your browser"
+                    except subprocess.CalledProcessError as e:
+                        self.logger.error(f"Failed to open browser: {e}")
+                        result = f"Failed to open browser: {e}"
+                
+                else:  # general_query or no action specified
+                    result = analysis.get('response', "I understand your request but I'm not sure how to help. Could you be more specific?")
+            
             else:
-                result = await self._handle_system_task(analysis)
+                result = analysis.get('response', "I'm not sure how to help with that. Could you rephrase your request?")
             
             # Update task record
             task.completed = True
@@ -134,61 +169,6 @@ class MacAssistant:
         
         return task.result if task.result else "Task failed"
     
-    async def _handle_browser_task(self, analysis: Dict[str, Any]) -> str:
-        """Handle browser-based task"""
-        # Find browser window
-        browser = self.screen.find_element_by_text(
-            analysis['target_app'] or 'chrome',
-            partial=True
-        )
-        
-        if browser:
-            # Click browser window
-            self.computer.click_element(browser)
-            
-            # Perform browser actions based on analysis
-            if analysis['requires_keyboard']:
-                self.computer.type_text(analysis['description'])
-            
-            return "Browser task completed"
-        else:
-            return "Browser window not found"
-    
-    async def _handle_app_task(self, analysis: Dict[str, Any]) -> str:
-        """Handle application-specific task"""
-        # Research app-specific automation
-        result = await self.research.research(
-            f"How to automate {analysis['target_app']} on Mac: {analysis['description']}",
-            context=f"Need to control {analysis['target_app']} application"
-        )
-        
-        # Find and activate app window
-        app = self.screen.find_element_by_text(analysis['target_app'], partial=True)
-        if app:
-            self.computer.click_element(app)
-            
-            # Perform app-specific actions
-            if analysis['requires_keyboard']:
-                self.computer.type_text(analysis['description'])
-            
-            return f"{analysis['target_app']} task completed"
-        else:
-            return f"{analysis['target_app']} window not found"
-    
-    async def _handle_system_task(self, analysis: Dict[str, Any]) -> str:
-        """Handle system-level task"""
-        # Research system automation
-        result = await self.research.research(
-            f"How to automate system task on Mac: {analysis['description']}",
-            context="Need to perform system-level automation"
-        )
-        
-        # Perform system actions based on analysis
-        if analysis['requires_keyboard']:
-            self.computer.type_text(analysis['description'])
-        
-        return "System task completed"
-    
     def get_history(self, limit: Optional[int] = None) -> List[Task]:
         """Get task history"""
         if limit:
@@ -199,24 +179,3 @@ class MacAssistant:
         """Clear task history"""
         self.history.clear()
         self._save_history()
-
-# Example usage:
-"""
-async def main():
-    assistant = MacAssistant()
-    
-    # Execute a task
-    result = await assistant.execute_task(
-        "Open Chrome and search for Python automation",
-        context="Need to research automation techniques"
-    )
-    print(result)
-    
-    # Check history
-    history = assistant.get_history(limit=5)
-    for task in history:
-        print(f"{task.timestamp}: {task.description} - {'Success' if task.completed else 'Failed'}")
-
-if __name__ == '__main__':
-    asyncio.run(main())
-"""
